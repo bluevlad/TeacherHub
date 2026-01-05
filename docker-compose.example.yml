@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # 1. Database (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: teacherhub-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: teacher
+      POSTGRES_PASSWORD: CHANGEME # Change this password
+      POSTGRES_DB: teacherhub
+    volumes:
+      - ./database/data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+    networks:
+      - teacherhub-network
+
+  # 2. Backend (Spring Boot)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teacherhub-backend
+    ports:
+      - "8081:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/teacherhub
+      SPRING_DATASOURCE_USERNAME: teacher
+      SPRING_DATASOURCE_PASSWORD: CHANGEME # Change this password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - db
+    networks:
+      - teacherhub-network
+    restart: unless-stopped
+
+  # 3. Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: teacherhub-frontend
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
+      - /app/node_modules
+    environment:
+      REACT_APP_API_URL: http://teacherhub.unmong.com:8081
+      CHOKIDAR_USEPOLLING: "true"
+    stdin_open: true
+    tty: true
+    networks:
+      - teacherhub-network
+    restart: unless-stopped
+
+  # 4. AI Crawler & Analysis (Python)
+  ai-crawler:
+    build:
+      context: ./ai-crawler
+      dockerfile: Dockerfile
+    container_name: teacherhub-ai
+    volumes:
+      - ./ai-crawler/src:/app/src
+      - ./ai-crawler/notebook:/app/notebook
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: teacher
+      DB_PASS: CHANGEME # Change this password
+      DB_NAME: teacherhub
+    depends_on:
+      - db
+    networks:
+      - teacherhub-network
+    restart: unless-stopped
+    command: python src/main.py
+
+networks:
+  teacherhub-network:
+    driver: bridge
