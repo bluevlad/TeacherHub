@@ -12,11 +12,11 @@
 ### 아키텍처 다이어그램
 ```mermaid
 graph TD
-    User[사용자 (Web Browser)] -->|HTTP :3001| Frontend[Frontend (React)]
-    Frontend -->|API Req :8081| Backend[Backend (Spring Boot)]
-    Backend -->|SQL| DB[(PostgreSQL)]
-    Crawler[AI-Crawler (Python)] -->|Insert Data| DB
-    Crawler -->|Scraping| TargetSite[Naver Cafe (Mobile)]
+    User["사용자 (Web Browser)"] -->|HTTP :3001| Frontend["Frontend (React)"]
+    Frontend -->|API Req :8081| Backend["Backend (Spring Boot)"]
+    Backend -->|SQL| DB[("PostgreSQL")]
+    Crawler["AI-Crawler (Python)"] -->|Insert Data| DB
+    Crawler -->|Scraping| TargetSite["Naver Cafe (Mobile)"]
 ```
 
 ### 서비스 구성 요소
