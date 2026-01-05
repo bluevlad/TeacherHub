@@ -28,6 +28,12 @@ public class ReputationData {
 
     private Double score;
 
+    @Column(name = "post_date")
+    private LocalDateTime postDate;
+
+    @Column(name = "comment_count")
+    private Integer commentCount;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 }

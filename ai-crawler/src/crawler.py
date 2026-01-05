@@ -6,7 +6,11 @@ import random
 
 class NaverCafeCrawler:
     def __init__(self, cafe_url, keyword, nid=None, npw=None):
-        self.cafe_url = cafe_url
+        # Determine Mobile URL
+        # cafe_url input: https://cafe.naver.com/m2school
+        # mobile url target: https://m.cafe.naver.com/m2school
+        self.cafe_id = cafe_url.split('/')[-1]
+        self.mobile_base = f"https://m.cafe.naver.com/{self.cafe_id}"
         self.keyword = keyword
         self.nid = nid
         self.npw = npw
@@ -28,14 +32,20 @@ class NaverCafeCrawler:
         # Click login button
         await page.click(".btn_login")
         await page.wait_for_load_state("networkidle")
-        print("[-] Login interaction done. (Check manually if captcha triggered)")
+        print("[-] Login interaction done.")
 
-    async def crawl(self, limit=5):
-        print(f"[*] Starting crawl for: {self.cafe_url} with keyword: {self.keyword}")
+    async def crawl(self, limit=10):
+        search_url = f"{self.mobile_base}/search?search.query={self.keyword}&search.sortBy=date&search.option=all"
+        print(f"[*] Starting Mobile crawl for: {search_url}")
+        
+        # Mobile User Agent
+        MOBILE_UA = "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36"
+
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                user_agent=MOBILE_UA,
+                viewport={"width": 375, "height": 812}
             )
             page = await context.new_page()
             
@@ -43,119 +53,106 @@ class NaverCafeCrawler:
             if self.nid and self.npw:
                 await self.login(page)
             
-            # 1. Access Cafe Main Page
-            await page.goto(self.cafe_url)
-            await page.wait_for_load_state("networkidle")
-            
-            # 2. Search Logic
-            # Note: Naver Cafe structure is complex with iframes.
-            # We will try to find the search input 'query' in the main frame or top frame.
+            # 1. Access Search Page Directly
             try:
-                # Common selector for cafe search input
-                await page.fill("input[name='query']", self.keyword)
-                await page.press("input[name='query']", "Enter")
-                print("[-] Search query submitted.")
+                await page.goto(search_url)
+                await page.wait_for_load_state("networkidle")
+                await page.wait_for_selector("ul.list_area", timeout=10000) # Wait for list
             except Exception as e:
-                print(f"[!] Search input not found directly. Trying alternative approach. Error: {e}")
-                # Alternative: constructing search URL if we knew clubid.
-                # For this sample, we assume standard layout.
+                print(f"[!] Init Failed: {e}")
+                await browser.close()
                 return []
 
-            await page.wait_for_timeout(2000) # Wait for iframe reload
-
-            # 3. Switch to 'cafe_main' iframe where content lives
-            try:
-                # Wait for the iframe to be attached
-                frame_element = await page.wait_for_selector("iframe#cafe_main")
-                frame = await frame_element.content_frame()
-                await frame.wait_for_selector(".article-board", timeout=5000)
-            except:
-                print("[!] Could not find content frame or board.")
-                return []
-            
-            # 4. Parse List
-            content = await frame.content()
+            # 2. Parse List
+            content = await page.content()
             soup = BeautifulSoup(content, 'html.parser')
             
-            # Extract article links
             articles = []
-            rows = soup.select(".article-board table tbody tr")
+            # Mobile list selector
+            items = soup.select("ul.list_area > li")
             
-            for row in rows:
+            for item in items:
                 try:
-                    title_elem = row.select_one(".article")
+                    title_elem = item.select_one(".tit")
                     if not title_elem: continue
                     
                     title = title_elem.get_text(strip=True)
-                    link = "https://cafe.naver.com" + title_elem['href']
-                    article_id = title_elem['href'].split('articleid=')[1].split('&')[0]
+                    # Link is usually in a parent or sibling anchor
+                    link_elem = item.select_one("a.txt_area")
+                    if not link_elem: continue
                     
+                    href = link_elem['href']
+                    # href format: /ArticleRead.nhn?clubid=...&articleid=...
+                    link = f"https://m.cafe.naver.com{href}"
+                    
+                    # Date & Comments
+                    date_elem = item.select_one(".time")
+                    post_date_str = date_elem.get_text(strip=True) if date_elem else ""
+                    
+                    comment_elem = item.select_one(".num") # Class 'num' usually contains comment count
+                    comment_count = 0
+                    if comment_elem:
+                        try:
+                            comment_count = int(comment_elem.get_text(strip=True))
+                        except: pass
+
                     articles.append({
-                        'id': article_id,
                         'title': title,
-                        'link': link
+                        'link': link,
+                        'post_date_str': post_date_str,
+                        'comment_count': comment_count,
+                        'comments': [] # Will fill later
                     })
                     if len(articles) >= limit: break
-                except:
+                except Exception as ex:
+                    print(f"[!] Parse error: {ex}")
                     continue
             
             print(f"[-] Found {len(articles)} articles. Starting details crawl...")
 
-            # 5. Detail Crawl
-            final_data = []
+            # 3. Detail Crawl (for content and comments)
             for art in articles:
                 print(f"    -> Visiting: {art['title'][:20]}...")
                 try:
-                    # Visit article url. Note: Naver Cafe articles often require switching frame again if visited directly
-                    # Trick: Mobile URL is easier: https://m.cafe.naver.com/...
-                    # Let's try visiting the link directly and handling iframe
                     await page.goto(art['link'])
                     await page.wait_for_load_state("domcontentloaded")
                     await page.wait_for_timeout(1000)
                     
-                    # Again, content is inside iframe#cafe_main
-                    frame_element = await page.wait_for_selector("iframe#cafe_main")
-                    frame = await frame_element.content_frame()
+                    detail_html = await page.content()
+                    d_soup = BeautifulSoup(detail_html, 'html.parser')
                     
-                    # Get Content
-                    content_html = await frame.content()
-                    detail_soup = BeautifulSoup(content_html, 'html.parser')
+                    # Content (Mobile)
+                    # Usually #postContent or .post_content or .se-main-container
+                    content_body = ""
+                    # Try common mobile selectors
+                    selectors = ["#postContent", ".se-main-container", ".post_content", "div.ContentRenderer"]
+                    for sel in selectors:
+                        c_elem = d_soup.select_one(sel)
+                        if c_elem:
+                            content_body = c_elem.get_text(strip=True)
+                            break
                     
-                    # Title
-                    real_title = detail_soup.select_one(".title_text").get_text(strip=True) if detail_soup.select_one(".title_text") else art['title']
-                    
-                    # Content
-                    body_text = ""
-                    content_container = detail_soup.select_one(".ContentRenderer") # Class name varies often: se-main-container, etc.
-                    if content_container:
-                        body_text = content_container.get_text(strip=True)
-                    else:
-                        # Fallback for old editor
-                        content_container = detail_soup.select_one("#tbody")
-                        if content_container: body_text = content_container.get_text(strip=True)
-
                     # Comments
+                    # Mobile comments are usually .u_cbox_contents or similar.
+                    # Sometimes comments are loaded via AJAX and might need wait.
+                    # We will try static parse first.
                     comments = []
-                    # Comments are often dynamic. Wait for comment section
-                    # Handling comment collection is complex due to AJAX. 
-                    # For sample, we try to grab rendered text if available immediately.
-                    comment_elems = detail_soup.select(".comment_text_box")
-                    for c in comment_elems:
+                    c_items = d_soup.select(".u_cbox_contents")
+                    for c in c_items:
                         comments.append(c.get_text(strip=True))
+                        
+                    art['content'] = content_body[:300]
+                    art['comments'] = comments
+                    # Update comment count if we found more actual comments
+                    if len(comments) > art['comment_count']:
+                        art['comment_count'] = len(comments)
 
-                    final_data.append({
-                        'title': real_title,
-                        'content': body_text[:200] + "..." if len(body_text) > 200 else body_text,
-                        'comments': comments,
-                        'url': art['link']
-                    })
-                    
-                    # Polite delay
-                    await page.wait_for_timeout(random.randint(1000, 2000))
-                    
+                    await page.wait_for_timeout(random.randint(500, 1500))
+
                 except Exception as e:
-                    print(f"[!] Error processing article {art['link']}: {e}")
+                    print(f"[!] Error details {art['link']}: {e}")
+                    art['content'] = ""
                     continue
 
             await browser.close()
-            return final_data
+            return articles
