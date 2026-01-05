@@ -1,0 +1,2 @@
+ALTER TABLE reputation_data ADD COLUMN IF NOT EXISTS post_date TIMESTAMP;
+ALTER TABLE reputation_data ADD COLUMN IF NOT EXISTS comment_count INTEGER DEFAULT 0;

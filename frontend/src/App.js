@@ -1,8 +1,11 @@
 import React from 'react';
 import ReputationList from './components/ReputationList';
+import ReputationStats from './components/ReputationStats';
 import { Container, Typography, Box } from '@mui/material';
 
 function App() {
+    const TARGET_KEYWORD = "한덕현";
+
     return (
         <Container maxWidth="lg">
             <Box sx={{ my: 4 }}>
@@ -10,9 +13,16 @@ function App() {
                     TeacherHub Dashboard
                 </Typography>
                 <Typography variant="subtitle1" gutterBottom color="text.secondary">
-                    Real-time Sentiment Analysis Monitoring (Target: 한덕현)
+                    Real-time Sentiment Analysis Monitoring
                 </Typography>
 
+                <Box sx={{ mt: 4, mb: 4 }}>
+                    <ReputationStats keyword={TARGET_KEYWORD} />
+                </Box>
+
+                <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>
+                    Recent Activities
+                </Typography>
                 <ReputationList />
             </Box>
         </Container>
