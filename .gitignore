@@ -39,6 +39,7 @@ env/
 
 # Docker
 .dockerignore
+
 docker-compose.yml
 !docker-compose.example.yml
 

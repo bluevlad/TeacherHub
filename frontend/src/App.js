@@ -1,15 +1,21 @@
 import React from 'react';
+import ReputationList from './components/ReputationList';
+import { Container, Typography, Box } from '@mui/material';
 
 function App() {
     return (
-        <div className="App">
-            <header className="App-header">
-                <h1>TeacherHub Dashboard</h1>
-                <p>
-                    System is running!
-                </p>
-            </header>
-        </div>
+        <Container maxWidth="lg">
+            <Box sx={{ my: 4 }}>
+                <Typography variant="h4" component="h1" gutterBottom>
+                    TeacherHub Dashboard
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom color="text.secondary">
+                    Real-time Sentiment Analysis Monitoring (Target: 한덕현)
+                </Typography>
+
+                <ReputationList />
+            </Box>
+        </Container>
     );
 }
 

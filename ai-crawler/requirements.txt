@@ -4,6 +4,9 @@ pandas
 sqlalchemy
 psycopg2-binary
 python-dotenv
+beautifulsoup4
+textblob
+playwright
 # Hugging Face (Optional for now)
 # transformers
 # torch
