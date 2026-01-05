@@ -1,0 +1,9 @@
+
+requests
+pandas
+sqlalchemy
+psycopg2-binary
+python-dotenv
+# Hugging Face (Optional for now)
+# transformers
+# torch

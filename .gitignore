@@ -39,3 +39,14 @@ env/
 
 # Docker
 .dockerignore
+docker-compose.yml
+!docker-compose.example.yml
+
+# Database
+database/data/
+
+# Secrets & Configs
+*.env
+*.env.*
+backend/src/main/resources/application.properties
+!backend/src/main/resources/application.properties.example
