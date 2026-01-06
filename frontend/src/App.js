@@ -4,7 +4,7 @@ import ReputationStats from './components/ReputationStats';
 import { Container, Typography, Box } from '@mui/material';
 
 function App() {
-    const TARGET_KEYWORD = "한덕현";
+    const TARGET_KEYWORD = "윌비스";
 
     return (
         <Container maxWidth="lg">
