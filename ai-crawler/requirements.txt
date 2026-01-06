@@ -10,3 +10,4 @@ playwright
 # Hugging Face (Optional for now)
 # transformers
 # torch
+Flask

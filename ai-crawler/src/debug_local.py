@@ -1,21 +1,39 @@
 import asyncio
-import time
 import os
+import sys
+
+# Force UTF-8 for Windows Terminal
+if sys.platform.startswith('win'):
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from crawler import NaverCafeCrawler
 from analyzer import SentimentAnalyzer
-import threading
-from flask import Flask, jsonify
+from datetime import datetime
 
-# Database Connection
+# Load .env from parent directory
+load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
+
+# Database Connection (Localhost)
 DB_USER = os.getenv("DB_USER", "teacher")
 DB_PASS = os.getenv("DB_PASS", "password")
-DB_HOST = os.getenv("DB_HOST", "db")
+DB_HOST = "localhost" # Force localhost for local access
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "teacherhub")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-engine = create_engine(DATABASE_URL)
+
+try:
+    engine = create_engine(DATABASE_URL)
+    with engine.connect() as conn:
+        print("[+] DB Connection Successful!")
+except Exception as e:
+    print(f"[!] DB Connection Failed: {e}")
+    print("Ensure Docker DB is running and accessible on port 5432.")
+    # We might continue just to test crawling even if DB fails
+    # sys.exit(1)
 
 def save_to_db(data):
     try:
@@ -30,74 +48,60 @@ def save_to_db(data):
     except Exception as e:
         print(f"    [DB Error] {e}")
 
-async def run_task():
+async def run_debug():
+    # Force Headless=False for debugging
+    # We need to monkey-patch or subclass, OR just modify crawler.py to accept headless arg.
+    # Let's modify crawler.py to accept headless arg first.
+    
     TARGET_URL = "https://cafe.naver.com/m2school"
     SITE_NAME = "Naver Cafe (GongDream)"
     KEYWORD = "윌비스"
-    
-    # Creds
     NAVER_ID = os.getenv("NAVER_ID")
     NAVER_PW = os.getenv("NAVER_PW")
-    
-    print("-" * 50)
-    print(f"TeacherHub AI Crawler On-Demand Start")
-    if NAVER_ID:
-        print(f"[*] Login mode enabled for user: {NAVER_ID[:3]}***")
-    print("-" * 50)
 
-    # 1. Crawl
+    print(f"[*] Crawling '{KEYWORD}' with ID: {NAVER_ID}")
+
+    # We need to modify crawler.py to allow passing headless option.
+    # checking crawler.py... it has `browser = await p.chromium.launch(headless=True)` hardcoded.
+    # I'll update crawler.py first.
+
     crawler = NaverCafeCrawler(TARGET_URL, KEYWORD, nid=NAVER_ID, npw=NAVER_PW)
-    # Increase limit to cover range
-    posts = await crawler.crawl(limit=50, start_date='2025-10-01', end_date='2025-12-31')
+    # Pass headless=False if supported
+    posts = await crawler.crawl(limit=50, start_date='2025-10-01', end_date='2025-12-31', headless=False)
     
     if not posts:
         print("[!] No posts found.")
         return
 
-    # 2. Analyze & Save
     analyzer = SentimentAnalyzer()
-    
     print(f"\n[-] Analysis & Saving ({len(posts)} posts):")
-    from datetime import datetime
     
     for post in posts:
         full_text = f"{post['title']} {post['content']} {' '.join(post['comments'])}"
         result = analyzer.analyze(full_text)
         
-        # Parse Date
-        # post_date_str format: 
-        # PC: "2024.01.05." or "14:22"
-        # Mobile: "24.01.05." or "14:22" (Year is 2 digits)
+        # Date Filter Logic (Same as main.py)
         p_date_str = post.get('post_date_str', '')
-        post_date = datetime.now() # Default
-        
+        post_date = datetime.now()
         try:
             p_date_str = p_date_str.replace('.', '-').strip()
             if p_date_str.endswith('-'): p_date_str = p_date_str[:-1]
-            
-            if ':' in p_date_str and len(p_date_str) <= 5: # HH:mm (Today)
-                # It is today's time
+            if ':' in p_date_str and len(p_date_str) <= 5:
                 now = datetime.now()
                 hm = p_date_str.split(':')
                 post_date = now.replace(hour=int(hm[0]), minute=int(hm[1]), second=0)
-            elif len(p_date_str) == 8: # YY-MM-DD (e.g., 24-01-05)
+            elif len(p_date_str) == 8:
                  post_date = datetime.strptime(p_date_str, "%y-%m-%d")
-            elif len(p_date_str) >= 10: # YYYY-MM-DD
+            elif len(p_date_str) >= 10:
                  post_date = datetime.strptime(p_date_str, "%Y-%m-%d")
-                 
-            # Filter by specific range (2025-10 ~ 2025-12)
-            # This is a hardcoded filter as per request. Ideally, make it configurable.
+            
             target_start = datetime(2025, 10, 1)
             target_end = datetime(2025, 12, 31, 23, 59, 59)
-            
             if not (target_start <= post_date <= target_end):
                 print(f"    [Skipped] Date out of range: {post_date}")
                 continue
-                
         except:
-             print(f"    [Date Parse Error] {p_date_str}")
-             # Skip if date invalid
-             continue
+             pass
 
         db_data = {
             "keyword": KEYWORD,
@@ -109,37 +113,19 @@ async def run_task():
             "post_date": post_date,
             "comment_count": post.get('comment_count', 0)
         }
-        
         save_to_db(db_data)
 
-# Flask Setup
-app = Flask(__name__)
-lock = threading.Lock()
-
-def run_async_crawl():
-    asyncio.run(run_task())
-
-@app.route('/crawl', methods=['POST'])
-def trigger_crawl():
-    if lock.locked():
-        return jsonify({"status": "error", "message": "Busy"}), 429
-    
-    with lock:
-        # Run sync wrapper for async task
-        # Ideally should use Queue or Celery for real production, 
-        # or Quart for async web server.
-        # Here we block the request until done (simple)
-        try:
-             run_async_crawl()
-             return jsonify({"status": "success", "message": "Done"})
-        except Exception as e:
-             return jsonify({"status": "error", "message": str(e)}), 500
-
-def wait_for_db():
-    print("Waiting for DB to be ready...", flush=True)
-    time.sleep(10)
-
 if __name__ == "__main__":
-    wait_for_db()
-    # Run Flask
-    app.run(host='0.0.0.0', port=5000)
+    if sys.platform.startswith('win'):
+        # On Windows, the default event loop policy (ProactorEventLoop) doesn't support subprocesses well with some async frameworks.
+        # However, Playwright on Windows usually requires ProactorEventLoop for subprocess pipes?
+        # WAIT: The error "NotImplementedError" in subprocess_exec usuall means using SelectorEventLoop on Windows which DOES NOT support subprocesses.
+        # The default on Python 3.8+ Windows IS ProactorEventLoop, which supports subprocesses.
+        # But `asyncio.WindowsSelectorEventLoopPolicy()` explicitly sets it to Selector, causing failure.
+        # Therefore, we should REMOVE the policy setting or force Proactor.
+        # The common fix for "NotImplementedError" in asyncio subprocess on Windows is usually to USE Proactor (default).
+        # So the previous code setting SelectorEventLoopPolicy was actually the CAUSE of the error.
+        # Let's remove it.
+        pass
+    
+    asyncio.run(run_debug())

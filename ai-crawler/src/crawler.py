@@ -34,30 +34,98 @@ class NaverCafeCrawler:
         await page.wait_for_load_state("networkidle")
         print("[-] Login interaction done.")
 
-    async def crawl(self, limit=10):
+    async def crawl(self, limit=50, start_date=None, end_date=None, headless=True):
+        # Mobile search basic
+        # We will fetch 'limit' items sorted by date, and filter by date range later if provided
         search_url = f"{self.mobile_base}/search?search.query={self.keyword}&search.sortBy=date&search.option=all"
         print(f"[*] Starting Mobile crawl for: {search_url}")
         
-        # Mobile User Agent
-        MOBILE_UA = "Mozilla/5.0 (Linux; Android 10; SM-G981B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.162 Mobile Safari/537.36"
+        # Update User Agent to a more common real device UA
+        MOBILE_UA = "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36"
 
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
+            # Add arguments to launch options for better stealth
+            browser = await p.chromium.launch(
+                headless=headless,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-sandbox"
+                ]
+            )
+            
             context = await browser.new_context(
                 user_agent=MOBILE_UA,
-                viewport={"width": 375, "height": 812}
+                viewport={"width": 375, "height": 812},
+                base_url="https://m.cafe.naver.com",
+                locale="ko-KR",
+                timezone_id="Asia/Seoul",
+                extra_http_headers={
+                    "Referer": "https://m.cafe.naver.com/",
+                    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7"
+                }
             )
+            
+            # Stealth scripts to hide webdriver property
+            await context.add_init_script("""
+                Object.defineProperty(navigator, 'webdriver', {
+                    get: () => undefined
+                });
+            """)
+            
             page = await context.new_page()
             
             # 0. Login if needed
             if self.nid and self.npw:
                 await self.login(page)
             
-            # 1. Access Search Page Directly
+            # 1. Get Club ID first (Robust way)
+            clubid = None
             try:
-                await page.goto(search_url)
-                await page.wait_for_load_state("networkidle")
-                await page.wait_for_selector("ul.list_area", timeout=10000) # Wait for list
+                print(f"[-] Fetching Club ID from: {self.mobile_base}")
+                await page.goto(self.mobile_base, wait_until="domcontentloaded")
+                
+                # Try to find clubid in links or script
+                # Common pattern: href contains "clubid=12345"
+                # Let's verify via any article link or specific meta
+                # Or use the user hint directly if extraction fails, but extraction is better.
+                
+                # Check for "g_iClubId" javaScript variable if possible, or look at hrefs
+                if not clubid:
+                    # Method A: Look for any link with clubid
+                    element = await page.query_selector("a[href*='clubid=']")
+                    if element:
+                        href = await element.get_attribute("href")
+                        # Extract 12026840 from ...clubid=12026840...
+                        import re
+                        match = re.search(r'clubid=(\d+)', href)
+                        if match:
+                            clubid = match.group(1)
+            except Exception as e:
+                print(f"[!] Warning: Failed to extract clubid automatically: {e}")
+
+            if not clubid:
+                # Fallback to hardcoded ID for 'm2school' (Dokgongsa) if detection failed
+                # User provided: 12026840
+                if 'm2school' in self.cafe_id:
+                     clubid = "12026840" 
+                     print(f"[-] Using fallback ClubID: {clubid}")
+                else:
+                     print("[!] Failed to determine ClubID. Aborting.")
+                     await browser.close()
+                     return []
+            else:
+                print(f"[-] Detected ClubID: {clubid}")
+
+            # 2. Access Search Page (SectionArticleSearch)
+            # Old/Standard Mobile Search: https://m.cafe.naver.com/SectionArticleSearch.nhn?clubid={}&query={}&sortBy=date
+            search_url = f"https://m.cafe.naver.com/SectionArticleSearch.nhn?clubid={clubid}&query={self.keyword}&sortBy=date"
+            print(f"[*] Starting Mobile crawl for: {search_url}")
+
+            try:
+                await page.goto(search_url, wait_until="domcontentloaded", timeout=30000)
+                await page.wait_for_timeout(2000)
+                await page.wait_for_selector("ul.list_area", timeout=10000)
             except Exception as e:
                 print(f"[!] Init Failed: {e}")
                 await browser.close()
