@@ -11,7 +11,7 @@ import {
 import {
     TrendingUp, TrendingDown, People, School, Comment, ThumbUp
 } from '@mui/icons-material';
-import { dashboardApi, reportApi } from '../api';
+import { dashboardApi } from '../api';
 
 // 통계 카드 컴포넌트
 const StatCard = ({ title, value, icon, change, color = 'primary' }) => (

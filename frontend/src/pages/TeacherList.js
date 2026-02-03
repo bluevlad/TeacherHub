@@ -2,14 +2,14 @@
  * Teacher List Page
  * 강사 목록 페이지
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
     Container, Grid, Paper, Typography, Box, Card, CardContent, CardActionArea,
     TextField, InputAdornment, Select, MenuItem, FormControl, InputLabel,
     Chip, CircularProgress, Alert, Avatar, Pagination
 } from '@mui/material';
-import { Search, School, TrendingUp, TrendingDown } from '@mui/icons-material';
+import { Search, TrendingUp, TrendingDown } from '@mui/icons-material';
 import { teacherApi, academyApi } from '../api';
 
 // 강사 카드 컴포넌트
@@ -85,14 +85,6 @@ function TeacherList() {
 
     const ITEMS_PER_PAGE = 12;
 
-    useEffect(() => {
-        fetchAcademies();
-    }, []);
-
-    useEffect(() => {
-        fetchTeachers();
-    }, [selectedAcademy, page]);
-
     const fetchAcademies = async () => {
         try {
             const response = await academyApi.getAll();
@@ -102,7 +94,7 @@ function TeacherList() {
         }
     };
 
-    const fetchTeachers = async () => {
+    const fetchTeachers = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -135,7 +127,15 @@ function TeacherList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [page, selectedAcademy]);
+
+    useEffect(() => {
+        fetchAcademies();
+    }, []);
+
+    useEffect(() => {
+        fetchTeachers();
+    }, [fetchTeachers]);
 
     const handleSearch = async () => {
         if (!searchTerm.trim()) {

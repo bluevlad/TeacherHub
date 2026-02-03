@@ -3,13 +3,12 @@
  * 학원별 통계 페이지
  */
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
     Container, Grid, Paper, Typography, Box, Card, CardContent, CardActionArea,
     CircularProgress, Alert, Avatar, Chip, Divider,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from '@mui/material';
-import { School, People, TrendingUp, TrendingDown, ThumbUp } from '@mui/icons-material';
+import { School, TrendingUp, TrendingDown, ThumbUp } from '@mui/icons-material';
 import { academyApi, dashboardApi } from '../api';
 
 // 학원 카드 컴포넌트
@@ -145,7 +144,6 @@ const AcademyTeachersTable = ({ teachers, loading }) => {
 };
 
 function AcademyList() {
-    const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);

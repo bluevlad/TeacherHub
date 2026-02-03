@@ -7,3 +7,4 @@ export { default as TeacherList } from './TeacherList';
 export { default as TeacherDetail } from './TeacherDetail';
 export { default as AcademyList } from './AcademyList';
 export { default as Reports } from './Reports';
+export { default as WeeklyReports } from './WeeklyReports';
