@@ -1,13 +1,28 @@
+# TeacherHub AI Crawler Requirements
 
-requests
-pandas
-sqlalchemy
-psycopg2-binary
-python-dotenv
-beautifulsoup4
-textblob
-playwright
+# Web Scraping
+playwright>=1.40.0
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
+requests>=2.31.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.0
+
+# Scheduling
+apscheduler>=3.10.0
+
+# Web Framework (API)
+flask>=3.0.0
+
+# Text Processing
+textblob>=0.17.0
+pandas>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+
 # Hugging Face (Optional for now)
 # transformers
 # torch
-Flask
