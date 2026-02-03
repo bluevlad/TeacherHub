@@ -1,0 +1,81 @@
+services:
+  # Backend (Spring Boot)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: teacherhub-backend
+    ports:
+      - "9010:8080"
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:postgresql://host.docker.internal:5432/teacherhub}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS:-postgres123}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - teacherhub-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Frontend (React)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: teacherhub-frontend
+    ports:
+      - "4010:4010"
+    environment:
+      PORT: 4010
+      REACT_APP_API_URL: ${API_URL:-http://localhost:9010}
+    depends_on:
+      - backend
+    networks:
+      - teacherhub-network
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4010"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # AI Crawler & Analysis (Python)
+  ai-crawler:
+    build:
+      context: ./ai-crawler
+      dockerfile: Dockerfile
+    container_name: teacherhub-ai
+    environment:
+      DB_HOST: ${DB_HOST:-host.docker.internal}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASS: ${DB_PASS:-postgres123}
+      DB_NAME: ${DB_NAME:-teacherhub}
+      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - backend
+    networks:
+      - teacherhub-network
+    restart: always
+    command: python src/main.py
+    healthcheck:
+      test: ["CMD", "python", "-c", "import os; exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+networks:
+  teacherhub-network:
+    driver: bridge
