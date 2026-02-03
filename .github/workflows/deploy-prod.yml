@@ -27,12 +27,11 @@ jobs:
           # $(date)
 
           # Database
-          DB_HOST=host.docker.internal
+          DB_HOST=postgresql
           DB_PORT=5432
           DB_USER=${{ secrets.DB_USER }}
           DB_PASS=${{ secrets.DB_PASS }}
           DB_NAME=teacherhub
-          DB_URL=jdbc:postgresql://host.docker.internal:5432/teacherhub
 
           # API URL
           API_URL=http://localhost:9010

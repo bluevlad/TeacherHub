@@ -9,14 +9,13 @@ services:
       - "9010:8080"
     environment:
       SERVER_PORT: 8080
-      SPRING_DATASOURCE_URL: ${DB_URL:-jdbc:postgresql://host.docker.internal:5432/teacherhub}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/teacherhub
       SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASS:-postgres123}
       SPRING_JPA_HIBERNATE_DDL_AUTO: update
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     networks:
       - teacherhub-network
+      - database-network
     restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -55,18 +54,19 @@ services:
       dockerfile: Dockerfile
     container_name: teacherhub-ai
     environment:
-      DB_HOST: ${DB_HOST:-host.docker.internal}
-      DB_PORT: ${DB_PORT:-5432}
+      DB_HOST: postgresql
+      DB_PORT: 5432
       DB_USER: ${DB_USER:-postgres}
       DB_PASS: ${DB_PASS:-postgres123}
-      DB_NAME: ${DB_NAME:-teacherhub}
-      OLLAMA_HOST: ${OLLAMA_HOST:-http://host.docker.internal:11434}
+      DB_NAME: teacherhub
+      OLLAMA_HOST: http://host.docker.internal:11434
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
       - backend
     networks:
       - teacherhub-network
+      - database-network
     restart: always
     command: python src/main.py
     healthcheck:
@@ -79,3 +79,5 @@ services:
 networks:
   teacherhub-network:
     driver: bridge
+  database-network:
+    external: true
