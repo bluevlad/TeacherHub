@@ -44,11 +44,11 @@ export const MentionTrendChart = ({ data, title = "주간 언급 트렌드" }) =
     }
 
     const chartData = {
-        labels: data.map(d => d.week_label || `W${d.week_number}`),
+        labels: data.map(d => d.weekLabel || `W${d.weekNumber}`),
         datasets: [
             {
                 label: '언급 수',
-                data: data.map(d => d.mention_count),
+                data: data.map(d => d.mentionCount),
                 borderColor: 'rgb(25, 118, 210)',
                 backgroundColor: 'rgba(25, 118, 210, 0.1)',
                 fill: true,
@@ -56,7 +56,7 @@ export const MentionTrendChart = ({ data, title = "주간 언급 트렌드" }) =
             },
             {
                 label: '추천',
-                data: data.map(d => d.recommendation_count),
+                data: data.map(d => d.recommendationCount),
                 borderColor: 'rgb(76, 175, 80)',
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 fill: false,
@@ -103,21 +103,21 @@ export const SentimentTrendChart = ({ data, title = "주간 감성 트렌드" })
     }
 
     const chartData = {
-        labels: data.map(d => d.week_label || `W${d.week_number}`),
+        labels: data.map(d => d.weekLabel || `W${d.weekNumber}`),
         datasets: [
             {
                 label: '긍정',
-                data: data.map(d => d.positive_count),
+                data: data.map(d => d.positiveCount),
                 backgroundColor: 'rgba(76, 175, 80, 0.8)',
             },
             {
                 label: '중립',
-                data: data.map(d => d.neutral_count || 0),
+                data: data.map(d => d.neutralCount || 0),
                 backgroundColor: 'rgba(158, 158, 158, 0.8)',
             },
             {
                 label: '부정',
-                data: data.map(d => d.negative_count),
+                data: data.map(d => d.negativeCount),
                 backgroundColor: 'rgba(244, 67, 54, 0.8)',
             }
         ]
@@ -165,11 +165,11 @@ export const RankTrendChart = ({ data, title = "주간 순위 변화" }) => {
     }
 
     const chartData = {
-        labels: data.map(d => d.week_label || `W${d.week_number}`),
+        labels: data.map(d => d.weekLabel || `W${d.weekNumber}`),
         datasets: [
             {
                 label: '전체 순위',
-                data: data.map(d => d.weekly_rank),
+                data: data.map(d => d.weeklyRank),
                 borderColor: 'rgb(156, 39, 176)',
                 backgroundColor: 'rgba(156, 39, 176, 0.1)',
                 fill: false,

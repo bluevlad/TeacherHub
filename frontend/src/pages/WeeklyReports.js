@@ -115,66 +115,66 @@ const WeeklyRankingTable = ({ reports, loading }) => {
                         <TableRow key={report.id || index} hover>
                             <TableCell>
                                 <Box display="flex" alignItems="center" gap={0.5}>
-                                    {getRankIcon(report.weekly_rank || index + 1)}
+                                    {getRankIcon(report.weeklyRank || index + 1)}
                                     <Typography fontWeight={index < 3 ? 'bold' : 'normal'}>
-                                        {report.weekly_rank || index + 1}
+                                        {report.weeklyRank || index + 1}
                                     </Typography>
                                 </Box>
                             </TableCell>
                             <TableCell>
                                 <Typography fontWeight="medium">
-                                    {report.teacher_name}
+                                    {report.teacherName}
                                 </Typography>
                             </TableCell>
-                            <TableCell>{report.academy_name}</TableCell>
-                            <TableCell align="right">{report.mention_count}</TableCell>
+                            <TableCell>{report.academyName}</TableCell>
+                            <TableCell align="right">{report.mentionCount}</TableCell>
                             <TableCell align="right">
                                 <Typography color="success.main">
-                                    {report.positive_count}
+                                    {report.positiveCount}
                                 </Typography>
                             </TableCell>
                             <TableCell align="right">
                                 <Typography color="error.main">
-                                    {report.negative_count}
+                                    {report.negativeCount}
                                 </Typography>
                             </TableCell>
                             <TableCell>
                                 <Chip
                                     size="small"
-                                    label={report.avg_sentiment_score ?
-                                        `${(report.avg_sentiment_score * 100).toFixed(0)}%` :
+                                    label={report.avgSentimentScore ?
+                                        `${(report.avgSentimentScore * 100).toFixed(0)}%` :
                                         '-'
                                     }
-                                    color={getSentimentColor(report.avg_sentiment_score)}
+                                    color={getSentimentColor(report.avgSentimentScore)}
                                 />
                             </TableCell>
                             <TableCell align="right">
                                 <Box display="flex" alignItems="center" justifyContent="flex-end" gap={0.5}>
                                     <ThumbUp fontSize="small" color="primary" />
-                                    {report.recommendation_count}
+                                    {report.recommendationCount}
                                 </Box>
                             </TableCell>
                             <TableCell>
-                                {report.mention_change_rate !== null && report.mention_change_rate !== undefined && (
+                                {report.mentionChangeRate !== null && report.mentionChangeRate !== undefined && (
                                     <Box display="flex" alignItems="center" gap={0.5}>
-                                        {report.mention_change_rate >= 0 ? (
+                                        {report.mentionChangeRate >= 0 ? (
                                             <TrendingUp fontSize="small" color="success" />
                                         ) : (
                                             <TrendingDown fontSize="small" color="error" />
                                         )}
                                         <Typography
                                             variant="body2"
-                                            color={report.mention_change_rate >= 0 ? 'success.main' : 'error.main'}
+                                            color={report.mentionChangeRate >= 0 ? 'success.main' : 'error.main'}
                                         >
-                                            {report.mention_change_rate >= 0 ? '+' : ''}
-                                            {report.mention_change_rate.toFixed(1)}%
+                                            {report.mentionChangeRate >= 0 ? '+' : ''}
+                                            {report.mentionChangeRate.toFixed(1)}%
                                         </Typography>
                                     </Box>
                                 )}
                             </TableCell>
                             <TableCell>
                                 <Box display="flex" gap={0.5} flexWrap="wrap">
-                                    {report.top_keywords?.slice(0, 3).map((keyword, idx) => (
+                                    {report.topKeywords?.slice(0, 3).map((keyword, idx) => (
                                         <Chip key={idx} label={keyword} size="small" variant="outlined" />
                                     ))}
                                 </Box>
@@ -210,7 +210,7 @@ function WeeklyReports() {
 
             // 상위 강사의 트렌드 데이터 조회
             if (rankingRes.data?.length > 0) {
-                const topTeacherId = rankingRes.data[0].teacher_id;
+                const topTeacherId = rankingRes.data[0].teacherId;
                 const trendRes = await weeklyApi.getTeacherTrend(topTeacherId, 8).catch(() => ({ data: [] }));
                 setTrendData(trendRes.data || []);
             }
