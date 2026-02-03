@@ -5,14 +5,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-    Container, Grid, Paper, Typography, Box, Card, CardContent,
+    Container, Grid, Paper, Typography, Box,
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Chip, CircularProgress, Alert, Button, Divider, LinearProgress,
+    Chip, CircularProgress, Alert, Button, Divider,
     List, ListItem, ListItemText, Avatar
 } from '@mui/material';
 import {
     ArrowBack, TrendingUp, TrendingDown, School, MenuBook,
-    ThumbUp, ThumbDown, SentimentSatisfied
+    ThumbUp
 } from '@mui/icons-material';
 import { teacherApi, reportApi } from '../api';
 

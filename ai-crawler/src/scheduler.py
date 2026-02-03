@@ -14,6 +14,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from .database import SessionLocal
 from .orchestrator import CrawlerOrchestrator
 from .services.report_generator import ReportGenerator
+from .services.weekly_aggregator import WeeklyAggregator
 
 
 class TaskScheduler:
@@ -99,6 +100,31 @@ class TaskScheduler:
         )
         print(f"[+] Added interval crawl job: {job_id} every {hours} hours")
 
+    def add_weekly_aggregation_job(
+        self,
+        day_of_week: str = "mon",
+        hour: int = 2,
+        minute: int = 0,
+        job_id: str = "weekly_aggregation"
+    ):
+        """
+        주간 집계 작업 추가 (매주 특정 요일)
+
+        Args:
+            day_of_week: 실행 요일 (mon, tue, wed, thu, fri, sat, sun)
+            hour: 실행 시간 (시)
+            minute: 실행 시간 (분)
+            job_id: 작업 ID
+        """
+        self.scheduler.add_job(
+            self._run_weekly_aggregation,
+            CronTrigger(day_of_week=day_of_week, hour=hour, minute=minute),
+            id=job_id,
+            name="Weekly Aggregation",
+            replace_existing=True
+        )
+        print(f"[+] Added weekly aggregation job: {job_id} on {day_of_week} at {hour:02d}:{minute:02d}")
+
     async def _run_crawl(self):
         """크롤링 작업 실행"""
         print(f"\n{'='*50}")
@@ -149,6 +175,25 @@ class TaskScheduler:
         finally:
             db.close()
 
+    async def _run_weekly_aggregation(self):
+        """주간 집계 작업 실행"""
+        print(f"\n{'='*50}")
+        print(f"[{datetime.now()}] Starting scheduled weekly aggregation")
+        print(f"{'='*50}")
+
+        db = SessionLocal()
+        try:
+            aggregator = WeeklyAggregator(db)
+            count = aggregator.aggregate_weekly_reports()
+
+            print(f"\n[{datetime.now()}] Weekly aggregation completed")
+            print(f"  Reports aggregated: {count}")
+
+        except Exception as e:
+            print(f"[!] Weekly aggregation error: {e}")
+        finally:
+            db.close()
+
     def setup_default_jobs(self):
         """기본 작업 설정"""
         # 매일 오전 6시: 크롤링
@@ -160,10 +205,14 @@ class TaskScheduler:
         # 4시간마다: 추가 크롤링
         self.add_interval_crawl(hours=4)
 
+        # 매주 월요일 새벽 2시: 주간 집계
+        self.add_weekly_aggregation_job(day_of_week="mon", hour=2, minute=0)
+
         print("\n[*] Default jobs configured:")
         print("    - Daily crawl at 06:00")
         print("    - Daily report at 07:00")
         print("    - Interval crawl every 4 hours")
+        print("    - Weekly aggregation on Monday at 02:00")
 
     def start(self):
         """스케줄러 시작"""
@@ -196,12 +245,14 @@ class TaskScheduler:
         즉시 작업 실행
 
         Args:
-            job_type: 'crawl' 또는 'report'
+            job_type: 'crawl', 'report', 또는 'weekly'
         """
         if job_type == "crawl":
             asyncio.create_task(self._run_crawl())
         elif job_type == "report":
             asyncio.create_task(self._run_report_generation())
+        elif job_type == "weekly":
+            asyncio.create_task(self._run_weekly_aggregation())
         else:
             print(f"[!] Unknown job type: {job_type}")
 

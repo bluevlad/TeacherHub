@@ -84,6 +84,41 @@ export const dashboardApi = {
     getSentimentTrend: (days = 7) => api.get('/api/v2/dashboard/sentiment-trend', { params: { days } }),
 };
 
+/**
+ * 주간 리포트 API
+ */
+export const weeklyApi = {
+    // 주간 리포트 조회
+    getReport: (year, week) => api.get('/api/v2/weekly/report', { params: { year, week } }),
+
+    // 강사별 주간 리포트
+    getTeacherReport: (teacherId, year, week) =>
+        api.get(`/api/v2/weekly/teacher/${teacherId}`, { params: { year, week } }),
+
+    // 주간 랭킹
+    getRanking: (year, week, limit = 20) =>
+        api.get('/api/v2/weekly/ranking', { params: { year, week, limit } }),
+
+    // 학원별 주간 통계
+    getAcademyStats: (academyId, year, week) =>
+        api.get(`/api/v2/weekly/academy/${academyId}`, { params: { year, week } }),
+
+    // 강사 트렌드 (최근 N주)
+    getTeacherTrend: (teacherId, weeks = 8) =>
+        api.get(`/api/v2/weekly/teacher/${teacherId}/trend`, { params: { weeks } }),
+
+    // 학원 트렌드
+    getAcademyTrend: (academyId, weeks = 8) =>
+        api.get(`/api/v2/weekly/academy/${academyId}/trend`, { params: { weeks } }),
+
+    // 현재 주 정보
+    getCurrentWeek: () => api.get('/api/v2/weekly/current'),
+
+    // 전체 주간 요약
+    getSummary: (year, week) =>
+        api.get('/api/v2/weekly/summary', { params: { year, week } }),
+};
+
 // Legacy API (기존 호환성)
 export const legacyApi = {
     getReputation: () => api.get('/api/reputation'),

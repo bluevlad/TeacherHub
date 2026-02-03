@@ -1,0 +1,155 @@
+# ============================================
+# TeacherHub Environment Configuration
+# 환경별 설정 파일
+# ============================================
+
+# 공통 설정
+common:
+  app_name: "TeacherHub"
+  version: "2.1.0"
+  timezone: "Asia/Seoul"
+
+  # 데이터 수집 설정
+  crawler:
+    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    request_delay_ms: 2000
+    max_retries: 3
+    timeout_seconds: 30
+
+  # 분석 설정
+  analysis:
+    sentiment_positive_threshold: 0.2
+    sentiment_negative_threshold: -0.2
+    min_keyword_frequency: 3
+    top_keywords_count: 10
+
+  # 스케줄러 설정
+  scheduler:
+    weekly_aggregation_day: 1      # 월요일
+    weekly_aggregation_hour: 2     # 새벽 2시
+    daily_report_hour: 23          # 밤 11시
+
+# 개발 환경
+development:
+  database:
+    host: "localhost"
+    port: 5432
+    name: "teacherhub_dev"
+    user: "teacherhub"
+    password: "${DB_PASSWORD}"
+    pool_size: 5
+
+  crawler:
+    enabled: true
+    interval_hours: 24            # 하루에 한번
+    max_pages_per_source: 5
+    headless: false               # 디버깅용
+
+  api:
+    host: "localhost"
+    port: 9090
+    cors_origins:
+      - "http://localhost:3000"
+      - "http://localhost:3001"
+    debug: true
+
+  logging:
+    level: "DEBUG"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 스테이징 환경
+staging:
+  database:
+    host: "${DB_HOST}"
+    port: 5432
+    name: "teacherhub_staging"
+    user: "teacherhub"
+    password: "${DB_PASSWORD}"
+    pool_size: 10
+
+  crawler:
+    enabled: true
+    interval_hours: 12
+    max_pages_per_source: 10
+    headless: true
+
+  api:
+    host: "0.0.0.0"
+    port: 9090
+    cors_origins:
+      - "https://staging.teacherhub.example.com"
+    debug: false
+
+  logging:
+    level: "INFO"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+# 프로덕션 환경
+production:
+  database:
+    host: "${DB_HOST}"
+    port: 5432
+    name: "teacherhub"
+    user: "teacherhub"
+    password: "${DB_PASSWORD}"
+    pool_size: 20
+    ssl_mode: "require"
+
+  crawler:
+    enabled: true
+    interval_hours: 6             # 6시간마다
+    max_pages_per_source: 20
+    headless: true
+
+  api:
+    host: "0.0.0.0"
+    port: 9090
+    cors_origins:
+      - "https://teacherhub.example.com"
+    debug: false
+
+  logging:
+    level: "WARNING"
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    file: "/var/log/teacherhub/app.log"
+
+# 수집 대상 설정
+sources:
+  naver_cafe:
+    enabled: true
+    cafes:
+      - name: "공단기"
+        cafe_id: "gongdangi"
+        url: "https://cafe.naver.com/gongdangi"
+        priority: 1
+      - name: "공시생모임"
+        cafe_id: "0916gosigosi"
+        url: "https://cafe.naver.com/0916gosigosi"
+        priority: 2
+
+  dcinside:
+    enabled: true
+    galleries:
+      - name: "공무원갤러리"
+        gallery_id: "government"
+        url: "https://gall.dcinside.com/board/lists/?id=government"
+        priority: 1
+      - name: "9급공무원갤러리"
+        gallery_id: "9officials"
+        url: "https://gall.dcinside.com/mgallery/board/lists/?id=9officials"
+        priority: 2
+
+# 학원 설정
+academies:
+  - code: "GONGDANGI"
+    name: "공단기"
+    aliases: ["공단기", "공무원단기"]
+  - code: "HACKERS"
+    name: "해커스공무원"
+    aliases: ["해커스", "해커스공무원"]
+  - code: "WILLBES"
+    name: "윌비스공무원"
+    aliases: ["윌비스", "윌비스공무원"]
+  - code: "EDUWILL"
+    name: "에듀윌공무원"
+    aliases: ["에듀윌", "에듀윌공무원"]

@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import MainLayout from './layouts/MainLayout';
-import { Dashboard, TeacherList, TeacherDetail, AcademyList, Reports } from './pages';
+import { Dashboard, TeacherList, TeacherDetail, AcademyList, Reports, WeeklyReports } from './pages';
 
 // 테마 설정
 const theme = createTheme({
@@ -65,6 +65,7 @@ function App() {
                         <Route path="teachers/:id" element={<TeacherDetail />} />
                         <Route path="academies" element={<AcademyList />} />
                         <Route path="reports" element={<Reports />} />
+                        <Route path="weekly" element={<WeeklyReports />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                 </Routes>

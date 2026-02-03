@@ -5,13 +5,13 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
-    AppBar, Box, Toolbar, Typography, Button, IconButton, Drawer,
+    AppBar, Box, Toolbar, Typography, IconButton, Drawer,
     List, ListItem, ListItemIcon, ListItemText, ListItemButton,
     useTheme, useMediaQuery, Divider
 } from '@mui/material';
 import {
     Menu as MenuIcon, Dashboard, People, School, Assessment,
-    Settings, ChevronLeft
+    Settings, ChevronLeft, DateRange
 } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 240;
@@ -20,7 +20,8 @@ const menuItems = [
     { text: '대시보드', icon: <Dashboard />, path: '/' },
     { text: '강사 목록', icon: <People />, path: '/teachers' },
     { text: '학원별 통계', icon: <School />, path: '/academies' },
-    { text: '리포트', icon: <Assessment />, path: '/reports' },
+    { text: '일별 리포트', icon: <Assessment />, path: '/reports' },
+    { text: '주간 리포트', icon: <DateRange />, path: '/weekly' },
 ];
 
 function MainLayout() {

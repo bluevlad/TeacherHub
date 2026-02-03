@@ -333,6 +333,163 @@ class AnalysisKeyword(Base):
 # ============================================
 # Legacy 테이블 (기존 호환성 유지)
 # ============================================
+# ============================================
+# 12. 주간 리포트 테이블
+# ============================================
+class WeeklyReport(Base):
+    """강사별 주간 리포트"""
+    __tablename__ = 'weekly_reports'
+
+    id = Column(Integer, primary_key=True)
+    teacher_id = Column(Integer, ForeignKey('teachers.id', ondelete='CASCADE'))
+    academy_id = Column(Integer, ForeignKey('academies.id', ondelete='CASCADE'))
+
+    # 기간 정보
+    year = Column(Integer, nullable=False)
+    week_number = Column(Integer, nullable=False)  # ISO week number (1-53)
+    week_start_date = Column(Date, nullable=False)
+    week_end_date = Column(Date, nullable=False)
+
+    # 언급 통계
+    mention_count = Column(Integer, default=0)
+    positive_count = Column(Integer, default=0)
+    negative_count = Column(Integer, default=0)
+    neutral_count = Column(Integer, default=0)
+    recommendation_count = Column(Integer, default=0)
+
+    # 난이도 통계
+    difficulty_easy_count = Column(Integer, default=0)
+    difficulty_medium_count = Column(Integer, default=0)
+    difficulty_hard_count = Column(Integer, default=0)
+
+    # 계산 지표
+    avg_sentiment_score = Column(Float)
+    sentiment_trend = Column(Float)  # 전주 대비 감성 변화
+    mention_change_rate = Column(Float)  # 전주 대비 언급 변화율 (%)
+    weekly_rank = Column(Integer)  # 해당 주 전체 순위
+    academy_rank = Column(Integer)  # 학원 내 순위
+
+    # 분석 데이터 (JSON)
+    top_keywords = Column(JSONB, default=[])
+    source_distribution = Column(JSONB, default={})
+    daily_distribution = Column(JSONB, default={})
+    mention_types = Column(JSONB, default={})
+
+    # AI 요약
+    ai_summary = Column(Text)
+    highlight_positive = Column(Text)
+    highlight_negative = Column(Text)
+
+    # 메타데이터
+    is_complete = Column(Boolean, default=False)
+    aggregated_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    teacher = relationship("Teacher")
+    academy = relationship("Academy")
+
+    # Constraints & Indexes
+    __table_args__ = (
+        UniqueConstraint('teacher_id', 'year', 'week_number', name='uk_weekly_teacher_year_week'),
+        Index('idx_weekly_reports_teacher', 'teacher_id'),
+        Index('idx_weekly_reports_academy', 'academy_id'),
+        Index('idx_weekly_reports_year_week', 'year', 'week_number'),
+    )
+
+
+# ============================================
+# 13. 학원별 주간 통계 테이블
+# ============================================
+class AcademyWeeklyStats(Base):
+    """학원별 주간 통계"""
+    __tablename__ = 'academy_weekly_stats'
+
+    id = Column(Integer, primary_key=True)
+    academy_id = Column(Integer, ForeignKey('academies.id', ondelete='CASCADE'))
+
+    # 기간 정보
+    year = Column(Integer, nullable=False)
+    week_number = Column(Integer, nullable=False)
+    week_start_date = Column(Date, nullable=False)
+    week_end_date = Column(Date, nullable=False)
+
+    # 통계
+    total_mentions = Column(Integer, default=0)
+    total_teachers_mentioned = Column(Integer, default=0)
+    avg_sentiment_score = Column(Float)
+    total_positive = Column(Integer, default=0)
+    total_negative = Column(Integer, default=0)
+    total_recommendations = Column(Integer, default=0)
+
+    # 랭킹 정보
+    top_teacher_id = Column(Integer, ForeignKey('teachers.id'))
+    top_teacher_mentions = Column(Integer, default=0)
+
+    # 분석 데이터
+    top_keywords = Column(JSONB, default=[])
+    source_distribution = Column(JSONB, default={})
+
+    # 메타데이터
+    aggregated_at = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    academy = relationship("Academy")
+    top_teacher = relationship("Teacher")
+
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint('academy_id', 'year', 'week_number', name='uk_academy_weekly_year_week'),
+    )
+
+
+# ============================================
+# 14. 집계 작업 로그 테이블
+# ============================================
+class AggregationLog(Base):
+    """집계 작업 로그"""
+    __tablename__ = 'aggregation_logs'
+
+    id = Column(Integer, primary_key=True)
+    aggregation_type = Column(String(50), nullable=False)  # daily, weekly, monthly
+    target_date = Column(Date)
+    year = Column(Integer)
+    week_number = Column(Integer)
+
+    # 상태
+    status = Column(String(20), nullable=False, default='pending')  # pending, running, completed, failed
+    started_at = Column(DateTime)
+    completed_at = Column(DateTime)
+
+    # 결과
+    records_processed = Column(Integer, default=0)
+    error_message = Column(Text)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# ============================================
+# 15. 시스템 설정 테이블
+# ============================================
+class SystemConfig(Base):
+    """시스템 설정"""
+    __tablename__ = 'system_configs'
+
+    id = Column(Integer, primary_key=True)
+    config_key = Column(String(100), nullable=False, unique=True)
+    config_value = Column(Text)
+    config_type = Column(String(20), default='string')  # string, int, boolean, json
+    description = Column(Text)
+    environment = Column(String(20), default='all')  # all, dev, prod
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+# ============================================
+# Legacy 테이블 (기존 호환성 유지)
+# ============================================
 class ReputationData(Base):
     """기존 reputation_data 테이블 (호환성 유지)"""
     __tablename__ = 'reputation_data'

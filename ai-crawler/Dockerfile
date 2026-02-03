@@ -14,4 +14,6 @@ COPY . .
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 
-CMD ["python", "src/main.py"]
+# Default: run scheduler
+# Override with: docker run ... python -m src.cli crawl
+CMD ["python", "-m", "src.scheduler"]
