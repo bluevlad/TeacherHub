@@ -1,12 +1,12 @@
 # Build stage
-FROM gradle:8.5-jdk17-alpine AS builder
+FROM gradle:8.5-jdk17 AS builder
 WORKDIR /app
 COPY build.gradle settings.gradle ./
 COPY src ./src
 RUN gradle build --no-daemon -x test
 
 # Run stage
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
