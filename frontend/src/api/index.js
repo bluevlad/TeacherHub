@@ -46,14 +46,20 @@ export const teacherApi = {
 };
 
 /**
- * 데일리 리포트 API
+ * 기간별 리포트 API (일별/주별/월별)
  */
 export const reportApi = {
+    // 일별 리포트
     getDaily: (date) => api.get('/api/v2/reports/daily', { params: { date } }),
-    getTeacherReport: (teacherId, date) => api.get(`/api/v2/reports/teacher/${teacherId}`, { params: { date } }),
-    getSummary: (date) => api.get('/api/v2/reports/summary', { params: { date } }),
-    getTopMentioned: (date, limit = 10) => api.get('/api/v2/reports/top-mentioned', { params: { date, limit } }),
-    getTrending: (days = 7) => api.get('/api/v2/reports/trending', { params: { days } }),
+
+    // 주별 리포트
+    getWeekly: (year, week) => api.get('/api/v2/reports/weekly', { params: { year, week } }),
+
+    // 월별 리포트
+    getMonthly: (year, month) => api.get('/api/v2/reports/monthly', { params: { year, month } }),
+
+    // 선택 가능한 기간 목록
+    getPeriods: () => api.get('/api/v2/reports/periods'),
 };
 
 /**
@@ -75,13 +81,13 @@ export const crawlApi = {
 };
 
 /**
- * 대시보드 API (집계 데이터)
+ * 대시보드 API (집계 데이터) - Analysis API 사용
  */
 export const dashboardApi = {
-    getSummary: () => api.get('/api/v2/dashboard/summary'),
-    getAcademyRanking: (date) => api.get('/api/v2/dashboard/academy-ranking', { params: { date } }),
-    getTeacherRanking: (date, limit = 20) => api.get('/api/v2/dashboard/teacher-ranking', { params: { date, limit } }),
-    getSentimentTrend: (days = 7) => api.get('/api/v2/dashboard/sentiment-trend', { params: { days } }),
+    getSummary: () => api.get('/api/v2/analysis/summary'),
+    getAcademyRanking: () => api.get('/api/v2/analysis/academy-stats'),
+    getTeacherRanking: (date, limit = 20) => api.get('/api/v2/analysis/ranking', { params: { date, limit } }),
+    getSentimentTrend: (days = 7) => api.get('/api/v2/analysis/reports', { params: { days } }),
 };
 
 /**
