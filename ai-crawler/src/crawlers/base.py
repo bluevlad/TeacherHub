@@ -3,32 +3,36 @@ Base Crawler Class
 공통 크롤링 기능 추상화
 """
 import asyncio
+import logging
 import random
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from playwright.async_api import async_playwright, Browser, BrowserContext, Page
 
+logger = logging.getLogger(__name__)
+
 
 class BaseCrawler(ABC):
     """크롤러 기본 클래스"""
 
-    # User Agents
-    DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    MOBILE_UA = "Mozilla/5.0 (Linux; Android 13; SM-S908B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Mobile Safari/537.36"
+    # User Agents (Chrome 131 - 2025/2026)
+    DESKTOP_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    MOBILE_UA = "Mozilla/5.0 (Linux; Android 14; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
     def __init__(self, source_code: str, base_url: str):
         self.source_code = source_code
         self.base_url = base_url
+        self._playwright = None
         self.browser: Optional[Browser] = None
         self.context: Optional[BrowserContext] = None
         self.page: Optional[Page] = None
 
     async def setup_browser(self, headless: bool = True, mobile: bool = False) -> Page:
         """브라우저 설정 및 페이지 반환"""
-        playwright = await async_playwright().start()
+        self._playwright = await async_playwright().start()
 
-        self.browser = await playwright.chromium.launch(
+        self.browser = await self._playwright.chromium.launch(
             headless=headless,
             args=[
                 "--disable-blink-features=AutomationControlled",
@@ -62,12 +66,15 @@ class BaseCrawler(ABC):
         return self.page
 
     async def close_browser(self):
-        """브라우저 종료"""
+        """브라우저 및 Playwright 인스턴스 종료"""
         if self.browser:
             await self.browser.close()
             self.browser = None
             self.context = None
             self.page = None
+        if self._playwright:
+            await self._playwright.stop()
+            self._playwright = None
 
     async def random_delay(self, min_ms: int = 500, max_ms: int = 1500):
         """랜덤 딜레이"""
@@ -80,7 +87,7 @@ class BaseCrawler(ABC):
             await self.random_delay(1000, 2000)
             return True
         except Exception as e:
-            print(f"[!] Navigation failed: {url} - {e}")
+            logger.warning(f"Navigation failed: {url} - {e}")
             return False
 
     @abstractmethod
@@ -133,6 +140,6 @@ class BaseCrawler(ABC):
                 return datetime.strptime(date_str[:10], "%Y-%m-%d")
 
         except Exception as e:
-            print(f"[!] Date parse error: {date_str} - {e}")
+            logger.debug(f"Date parse error: {date_str} - {e}")
 
         return None
