@@ -7,7 +7,7 @@ python-dotenv
 beautifulsoup4
 textblob
 playwright
+apscheduler
 # Hugging Face (Optional for now)
 # transformers
 # torch
-Flask

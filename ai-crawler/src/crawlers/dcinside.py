@@ -2,40 +2,38 @@
 DC Inside Gallery Crawler
 디시인사이드 갤러리 크롤러
 """
+import logging
 import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, urlencode
+from urllib.parse import urlencode
 from .base import BaseCrawler
+
+logger = logging.getLogger(__name__)
 
 
 class DCInsideCrawler(BaseCrawler):
     """디시인사이드 갤러리 크롤러"""
 
-    # 갤러리 정보
+    # 갤러리 정보 (시드 데이터 기준)
     GALLERIES = {
-        'gongmuwon': {
-            'name': '공무원 갤러리',
-            'type': 'mgallery',  # 마이너 갤러리
-            'url': 'https://gall.dcinside.com/mgallery/board/lists/?id=gongmuwon'
-        },
-        'gongsilife': {
-            'name': '공시생 갤러리',
-            'type': 'mgallery',
-            'url': 'https://gall.dcinside.com/mgallery/board/lists/?id=gongsilife'
-        },
         'government': {
-            'name': '공무원 시험 갤러리',
-            'type': 'mini',  # 미니 갤러리
-            'url': 'https://gall.dcinside.com/mini/board/lists/?id=government'
+            'name': '공무원 갤러리',
+            'type': 'gallery',    # 일반 갤러리
+            'url': 'https://gall.dcinside.com/board/lists/?id=government'
+        },
+        'gongmuwon': {
+            'name': '공무원 마이너 갤러리',
+            'type': 'mgallery',   # 마이너 갤러리
+            'url': 'https://gall.dcinside.com/mgallery/board/lists/?id=gongmuwon'
         }
     }
 
     def __init__(self, gallery_id: str, source_code: str):
         """
         Args:
-            gallery_id: 갤러리 ID (gongmuwon, gongsilife, government)
+            gallery_id: 갤러리 ID (government, gongmuwon)
             source_code: 소스 코드 (DB 저장용)
         """
         gallery_info = self.GALLERIES.get(gallery_id, {})
@@ -47,7 +45,9 @@ class DCInsideCrawler(BaseCrawler):
 
     def _get_base_path(self) -> str:
         """갤러리 타입에 따른 기본 경로"""
-        if self.gallery_type == 'mini':
+        if self.gallery_type == 'gallery':
+            return 'https://gall.dcinside.com/board'
+        elif self.gallery_type == 'mini':
             return 'https://gall.dcinside.com/mini/board'
         return 'https://gall.dcinside.com/mgallery/board'
 
@@ -66,7 +66,7 @@ class DCInsideCrawler(BaseCrawler):
                 's_keyword': keyword
             }
             search_url = f"{base_path}/lists/?{urlencode(params)}"
-            print(f"[*] DC Inside Search: {search_url}")
+            logger.info(f"DC Inside Search: {search_url}")
 
             if not await self.safe_goto(search_url):
                 return results
@@ -76,7 +76,7 @@ class DCInsideCrawler(BaseCrawler):
             soup = BeautifulSoup(content, 'html.parser')
 
             articles = self._parse_list_page(soup, limit)
-            print(f"[-] Found {len(articles)} articles. Fetching details...")
+            logger.info(f"Found {len(articles)} articles. Fetching details...")
 
             # 상세 페이지 크롤링
             for article in articles:
@@ -97,7 +97,7 @@ class DCInsideCrawler(BaseCrawler):
         try:
             await self.setup_browser(headless=True, mobile=False)
 
-            print(f"[*] DC Inside Latest: {self.base_url}")
+            logger.info(f"DC Inside Latest: {self.base_url}")
 
             if not await self.safe_goto(self.base_url):
                 return results
@@ -106,7 +106,7 @@ class DCInsideCrawler(BaseCrawler):
             soup = BeautifulSoup(content, 'html.parser')
 
             articles = self._parse_list_page(soup, limit)
-            print(f"[-] Found {len(articles)} articles. Fetching details...")
+            logger.info(f"Found {len(articles)} articles. Fetching details...")
 
             for article in articles:
                 detail = await self._crawl_detail(article['url'])
@@ -132,7 +132,7 @@ class DCInsideCrawler(BaseCrawler):
                 if article:
                     articles.append(article)
             except Exception as e:
-                print(f"[!] Parse error: {e}")
+                logger.debug(f"Parse error: {e}")
                 continue
 
         return articles
@@ -244,7 +244,7 @@ class DCInsideCrawler(BaseCrawler):
                 parts = date_str.split('.')
                 return now.replace(month=int(parts[0]), day=int(parts[1]))
         except Exception as e:
-            print(f"[!] DC date parse error: {date_str} - {e}")
+            logger.debug(f"DC date parse error: {date_str} - {e}")
 
         return None
 
@@ -294,6 +294,6 @@ class DCInsideCrawler(BaseCrawler):
             result['comments'] = comments
 
         except Exception as e:
-            print(f"[!] Detail crawl error: {e}")
+            logger.warning(f"Detail crawl error: {e}")
 
         return result

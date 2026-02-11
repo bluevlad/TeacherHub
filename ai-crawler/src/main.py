@@ -1,145 +1,186 @@
+"""
+TeacherHub AI Crawler - V2 Entrypoint
+Docker 컨테이너의 메인 엔트리포인트
+
+실행 모드:
+  full    - 스케줄러 + 크롤링 전체 실행 (운영 MacBook)
+  ai-only - 스케줄러/크롤링 비활성화, DB 접속만 유지 (개발서버 AI 실험용)
+"""
+import argparse
 import asyncio
-import time
 import os
-from sqlalchemy import create_engine, text
-from crawler import NaverCafeCrawler
-from analyzer import SentimentAnalyzer
-import threading
-from flask import Flask, jsonify
+import sys
+import time
+import signal
+import logging
 
-# Database Connection
-DB_USER = os.getenv("DB_USER", "teacher")
-DB_PASS = os.getenv("DB_PASS", "password")
-DB_HOST = os.getenv("DB_HOST", "db")
-DB_PORT = os.getenv("DB_PORT", "5432")
-DB_NAME = os.getenv("DB_NAME", "teacherhub")
+from .logging_config import setup_logging
+from .database import engine, init_db, SessionLocal
+from .scheduler import TaskScheduler
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-engine = create_engine(DATABASE_URL)
+logger = logging.getLogger(__name__)
 
-def save_to_db(data):
-    try:
-        with engine.connect() as conn:
-            query = text("""
-                INSERT INTO reputation_data (keyword, site_name, title, url, sentiment, score, post_date, comment_count)
-                VALUES (:keyword, :site_name, :title, :url, :sentiment, :score, :post_date, :comment_count)
-            """)
-            conn.execute(query, data)
-            conn.commit()
-            print(f"    [DB] Saved: {data['title'][:20]}...")
-    except Exception as e:
-        print(f"    [DB Error] {e}")
 
-async def run_task():
-    TARGET_URL = "https://cafe.naver.com/m2school"
-    SITE_NAME = "Naver Cafe (GongDream)"
-    KEYWORD = "윌비스"
-    
-    # Creds
-    NAVER_ID = os.getenv("NAVER_ID")
-    NAVER_PW = os.getenv("NAVER_PW")
-    
-    print("-" * 50)
-    print(f"TeacherHub AI Crawler On-Demand Start")
-    if NAVER_ID:
-        print(f"[*] Login mode enabled for user: {NAVER_ID[:3]}***")
-    print("-" * 50)
+def parse_args():
+    """CLI 인자 파싱"""
+    parser = argparse.ArgumentParser(description="TeacherHub AI Crawler V2")
+    parser.add_argument(
+        "--mode",
+        choices=["full", "ai-only"],
+        default=None,
+        help="실행 모드: full(스케줄러), ai-only(DB 접속만)"
+    )
+    return parser.parse_args()
 
-    # 1. Crawl
-    crawler = NaverCafeCrawler(TARGET_URL, KEYWORD, nid=NAVER_ID, npw=NAVER_PW)
-    # Increase limit to cover range
-    posts = await crawler.crawl(limit=50, start_date='2025-10-01', end_date='2025-12-31')
-    
-    if not posts:
-        print("[!] No posts found.")
-        return
 
-    # 2. Analyze & Save
-    analyzer = SentimentAnalyzer()
-    
-    print(f"\n[-] Analysis & Saving ({len(posts)} posts):")
-    from datetime import datetime
-    
-    for post in posts:
-        full_text = f"{post['title']} {post['content']} {' '.join(post['comments'])}"
-        result = analyzer.analyze(full_text)
-        
-        # Parse Date
-        # post_date_str format: 
-        # PC: "2024.01.05." or "14:22"
-        # Mobile: "24.01.05." or "14:22" (Year is 2 digits)
-        p_date_str = post.get('post_date_str', '')
-        post_date = datetime.now() # Default
-        
+def get_app_mode(args) -> str:
+    """실행 모드 결정 (CLI 인자 > 환경변수 > 기본값)"""
+    if args.mode:
+        return args.mode
+    return os.getenv("APP_MODE", "full").lower()
+
+
+def wait_for_db(max_retries: int = 30, retry_interval: int = 3):
+    """DB 연결 대기 (retry 로직)"""
+    from sqlalchemy import text
+
+    for attempt in range(1, max_retries + 1):
         try:
-            p_date_str = p_date_str.replace('.', '-').strip()
-            if p_date_str.endswith('-'): p_date_str = p_date_str[:-1]
-            
-            if ':' in p_date_str and len(p_date_str) <= 5: # HH:mm (Today)
-                # It is today's time
-                now = datetime.now()
-                hm = p_date_str.split(':')
-                post_date = now.replace(hour=int(hm[0]), minute=int(hm[1]), second=0)
-            elif len(p_date_str) == 8: # YY-MM-DD (e.g., 24-01-05)
-                 post_date = datetime.strptime(p_date_str, "%y-%m-%d")
-            elif len(p_date_str) >= 10: # YYYY-MM-DD
-                 post_date = datetime.strptime(p_date_str, "%Y-%m-%d")
-                 
-            # Filter by specific range (2025-10 ~ 2025-12)
-            # This is a hardcoded filter as per request. Ideally, make it configurable.
-            target_start = datetime(2025, 10, 1)
-            target_end = datetime(2025, 12, 31, 23, 59, 59)
-            
-            if not (target_start <= post_date <= target_end):
-                print(f"    [Skipped] Date out of range: {post_date}")
-                continue
-                
-        except:
-             print(f"    [Date Parse Error] {p_date_str}")
-             # Skip if date invalid
-             continue
-
-        db_data = {
-            "keyword": KEYWORD,
-            "site_name": SITE_NAME,
-            "title": post['title'],
-            "url": post['url'],
-            "sentiment": result['label'],
-            "score": result['score'],
-            "post_date": post_date,
-            "comment_count": post.get('comment_count', 0)
-        }
-        
-        save_to_db(db_data)
-
-# Flask Setup
-app = Flask(__name__)
-lock = threading.Lock()
-
-def run_async_crawl():
-    asyncio.run(run_task())
-
-@app.route('/crawl', methods=['POST'])
-def trigger_crawl():
-    if lock.locked():
-        return jsonify({"status": "error", "message": "Busy"}), 429
-    
-    with lock:
-        # Run sync wrapper for async task
-        # Ideally should use Queue or Celery for real production, 
-        # or Quart for async web server.
-        # Here we block the request until done (simple)
-        try:
-             run_async_crawl()
-             return jsonify({"status": "success", "message": "Done"})
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+            logger.info("Database connection established")
+            return True
         except Exception as e:
-             return jsonify({"status": "error", "message": str(e)}), 500
+            logger.warning(f"DB connection attempt {attempt}/{max_retries} failed: {e}")
+            if attempt < max_retries:
+                time.sleep(retry_interval)
 
-def wait_for_db():
-    print("Waiting for DB to be ready...", flush=True)
-    time.sleep(10)
+    logger.error("Failed to connect to database after max retries")
+    return False
+
+
+async def run_initial_crawl():
+    """초기 크롤링 1회 실행 (선택적)"""
+    from .orchestrator import CrawlerOrchestrator
+
+    naver_id = os.getenv("NAVER_ID")
+    naver_pw = os.getenv("NAVER_PW")
+    crawl_limit = int(os.getenv("CRAWL_LIMIT", "30"))
+
+    db = SessionLocal()
+    try:
+        orchestrator = CrawlerOrchestrator(
+            db=db,
+            naver_id=naver_id,
+            naver_pw=naver_pw
+        )
+        results = await orchestrator.crawl_all_sources(limit=crawl_limit)
+
+        success_count = sum(1 for r in results if r['success'])
+        total_posts = sum(r['posts_collected'] for r in results)
+        logger.info(f"Initial crawl completed: {success_count}/{len(results)} sources, {total_posts} posts")
+
+        return results
+    except Exception as e:
+        logger.error(f"Initial crawl failed: {e}")
+        return []
+    finally:
+        db.close()
+
+
+async def run_full_mode():
+    """full 모드: 스케줄러 + 크롤링 전체 실행 (운영용)"""
+    # 초기 크롤링 (환경 변수로 제어)
+    run_initial = os.getenv("RUN_INITIAL_CRAWL", "false").lower() == "true"
+    if run_initial:
+        logger.info("Running initial crawl...")
+        await run_initial_crawl()
+
+    # 스케줄러 시작
+    naver_id = os.getenv("NAVER_ID")
+    naver_pw = os.getenv("NAVER_PW")
+    crawl_limit = int(os.getenv("CRAWL_LIMIT", "50"))
+
+    scheduler = TaskScheduler(
+        naver_id=naver_id,
+        naver_pw=naver_pw,
+        crawl_limit=crawl_limit
+    )
+    scheduler.setup_default_jobs()
+    scheduler.start()
+
+    logger.info("Scheduler is running. Waiting for scheduled tasks...")
+
+    # Graceful shutdown
+    stop_event = asyncio.Event()
+
+    def handle_signal(sig, frame):
+        logger.info(f"Received signal {sig}. Shutting down...")
+        stop_event.set()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    try:
+        await stop_event.wait()
+    except (KeyboardInterrupt, SystemExit):
+        pass
+    finally:
+        scheduler.stop()
+
+
+async def run_ai_only_mode():
+    """ai-only 모드: DB 접속 유지, 스케줄러 비활성화 (개발서버 AI 실험용)"""
+    logger.info("AI-Only mode: scheduler disabled, DB connection active")
+    logger.info("Use CLI for manual operations: python -m src.cli crawl/report/status")
+
+    # Graceful shutdown
+    stop_event = asyncio.Event()
+
+    def handle_signal(sig, frame):
+        logger.info(f"Received signal {sig}. Shutting down...")
+        stop_event.set()
+
+    signal.signal(signal.SIGINT, handle_signal)
+    signal.signal(signal.SIGTERM, handle_signal)
+
+    try:
+        await stop_event.wait()
+    except (KeyboardInterrupt, SystemExit):
+        pass
+
+
+async def main():
+    """메인 실행 함수"""
+    setup_logging()
+    args = parse_args()
+    mode = get_app_mode(args)
+
+    logger.info("=" * 60)
+    logger.info(f"TeacherHub AI Crawler V2 Starting... (mode={mode})")
+    logger.info("=" * 60)
+
+    # 1. DB 연결 대기
+    if not wait_for_db():
+        logger.error("Cannot start without database connection. Exiting.")
+        sys.exit(1)
+
+    # 2. DB 테이블 생성 확인
+    try:
+        init_db()
+        logger.info("Database tables initialized")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {e}")
+        sys.exit(1)
+
+    # 3. 모드별 실행
+    if mode == "ai-only":
+        await run_ai_only_mode()
+    else:
+        await run_full_mode()
+
+    logger.info("TeacherHub AI Crawler stopped.")
+
 
 if __name__ == "__main__":
-    wait_for_db()
-    # Run Flask
-    app.run(host='0.0.0.0', port=5000)
+    asyncio.run(main())

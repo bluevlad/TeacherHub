@@ -34,6 +34,11 @@ def get_db():
         db.close()
 
 
+def get_session():
+    """Create and return a new database session"""
+    return SessionLocal()
+
+
 def init_db():
     """Initialize database tables (create if not exists)"""
     from . import models  # Import models to register them

@@ -2,11 +2,14 @@
 Naver Cafe Crawler
 네이버 카페 크롤러
 """
+import logging
 import re
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from bs4 import BeautifulSoup
 from .base import BaseCrawler
+
+logger = logging.getLogger(__name__)
 
 
 class NaverCafeCrawler(BaseCrawler):
@@ -14,9 +17,9 @@ class NaverCafeCrawler(BaseCrawler):
 
     # 카페별 Club ID 매핑 (자동 감지 실패 시 사용)
     CAFE_IDS = {
-        'gongstar': '29854109',      # 공스타그램
+        'gongstar': '28956533',      # 공스타그램
         'm2school': '12026840',      # 공드림 (독공사)
-        'gongsilife': '15779086',    # 공시생 라이프
+        '9gong': '16558386',         # 9급공무원갤러리
     }
 
     def __init__(self, cafe_id: str, source_code: str, nid: str = None, npw: str = None):
@@ -36,10 +39,10 @@ class NaverCafeCrawler(BaseCrawler):
     async def login(self):
         """네이버 로그인"""
         if not self.nid or not self.npw:
-            print("[-] No credentials provided. Skipping login.")
+            logger.info("No credentials provided. Skipping login.")
             return False
 
-        print("[-] Attempting Naver login...")
+        logger.info("Attempting Naver login...")
         try:
             await self.page.goto("https://nid.naver.com/nidlogin.login")
             await self.page.evaluate(f"document.getElementById('id').value = '{self.nid}'")
@@ -47,10 +50,10 @@ class NaverCafeCrawler(BaseCrawler):
             await self.random_delay(800, 1200)
             await self.page.click(".btn_login")
             await self.page.wait_for_load_state("networkidle")
-            print("[-] Login completed.")
+            logger.info("Login completed.")
             return True
         except Exception as e:
-            print(f"[!] Login failed: {e}")
+            logger.warning(f"Login failed: {e}")
             return False
 
     async def get_club_id(self) -> Optional[str]:
@@ -66,10 +69,10 @@ class NaverCafeCrawler(BaseCrawler):
                 match = re.search(r'clubid=(\d+)', href)
                 if match:
                     self.club_id = match.group(1)
-                    print(f"[-] Detected ClubID: {self.club_id}")
+                    logger.info(f"Detected ClubID: {self.club_id}")
                     return self.club_id
         except Exception as e:
-            print(f"[!] Failed to get club ID: {e}")
+            logger.error(f"Failed to get club ID: {e}")
 
         return None
 
@@ -81,30 +84,43 @@ class NaverCafeCrawler(BaseCrawler):
             await self.setup_browser(headless=True, mobile=True)
 
             if self.nid and self.npw:
-                await self.login()
+                login_ok = await self.login()
+                if not login_ok:
+                    logger.info("Continuing without login (fallback)")
 
             club_id = await self.get_club_id()
             if not club_id:
-                print("[!] Failed to get ClubID. Aborting.")
+                logger.error("Failed to get ClubID. Aborting.")
                 return results
 
             # 검색 URL
             search_url = f"https://m.cafe.naver.com/SectionArticleSearch.nhn?clubid={club_id}&query={keyword}&sortBy=date"
-            print(f"[*] Crawling: {search_url}")
+            logger.info(f"Crawling: {search_url}")
 
             if not await self.safe_goto(search_url):
                 return results
 
-            try:
-                await self.page.wait_for_selector("ul.list_area", timeout=10000)
-            except:
-                print("[!] No results found")
+            # 목록 셀렉터 대기 (여러 셀렉터 시도)
+            list_selectors = ["ul.list_area", "ul.article-list", "div.ArticleSearchListArea"]
+            list_found = False
+            for sel in list_selectors:
+                try:
+                    await self.page.wait_for_selector(sel, timeout=5000)
+                    list_found = True
+                    break
+                except:
+                    continue
+
+            if not list_found:
+                logger.warning("No results found")
                 return results
 
             # 목록 파싱
             content = await self.page.content()
             soup = BeautifulSoup(content, 'html.parser')
             items = soup.select("ul.list_area > li")
+            if not items:
+                items = soup.select("ul.article-list > li")
 
             articles = []
             for item in items[:limit]:
@@ -113,10 +129,10 @@ class NaverCafeCrawler(BaseCrawler):
                     if article:
                         articles.append(article)
                 except Exception as e:
-                    print(f"[!] Parse error: {e}")
+                    logger.debug(f"Parse error: {e}")
                     continue
 
-            print(f"[-] Found {len(articles)} articles. Fetching details...")
+            logger.info(f"Found {len(articles)} articles. Fetching details...")
 
             # 상세 페이지 크롤링
             for article in articles:
@@ -138,7 +154,9 @@ class NaverCafeCrawler(BaseCrawler):
             await self.setup_browser(headless=True, mobile=True)
 
             if self.nid and self.npw:
-                await self.login()
+                login_ok = await self.login()
+                if not login_ok:
+                    logger.info("Continuing without login (fallback)")
 
             club_id = await self.get_club_id()
             if not club_id:
@@ -146,7 +164,7 @@ class NaverCafeCrawler(BaseCrawler):
 
             # 전체글 보기 URL
             list_url = f"https://m.cafe.naver.com/ArticleList.nhn?search.clubid={club_id}&search.menuid=0&search.boardtype=L"
-            print(f"[*] Crawling latest: {list_url}")
+            logger.info(f"Crawling latest: {list_url}")
 
             if not await self.safe_goto(list_url):
                 return results
@@ -154,6 +172,8 @@ class NaverCafeCrawler(BaseCrawler):
             content = await self.page.content()
             soup = BeautifulSoup(content, 'html.parser')
             items = soup.select("ul.list_area > li")
+            if not items:
+                items = soup.select("ul.article-list > li")
 
             for item in items[:limit]:
                 try:
@@ -164,7 +184,7 @@ class NaverCafeCrawler(BaseCrawler):
                         results.append(article)
                         await self.random_delay()
                 except Exception as e:
-                    print(f"[!] Error: {e}")
+                    logger.debug(f"Error: {e}")
                     continue
 
         finally:
@@ -263,6 +283,6 @@ class NaverCafeCrawler(BaseCrawler):
                 result['comment_count'] = len(comments)
 
         except Exception as e:
-            print(f"[!] Detail crawl error: {e}")
+            logger.warning(f"Detail crawl error: {e}")
 
         return result
