@@ -3,6 +3,7 @@ Crawler Orchestrator
 크롤링 작업 통합 관리
 """
 import asyncio
+import logging
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from sqlalchemy.orm import Session
@@ -12,19 +13,21 @@ from .models import CollectionSource, CrawlLog
 from .crawlers import NaverCafeCrawler, DCInsideCrawler
 from .services import MentionExtractor
 
+logger = logging.getLogger(__name__)
+
 
 class CrawlerOrchestrator:
     """크롤링 작업 오케스트레이터"""
 
-    # 소스 코드별 크롤러 매핑
+    # 소스 코드별 크롤러 매핑 (DB 시드 데이터 기준)
     CRAWLER_MAP = {
         # 네이버 카페
         'naver_gongstar': ('naver_cafe', 'gongstar'),
         'naver_gongdream': ('naver_cafe', 'm2school'),
+        'naver_9gong': ('naver_cafe', '9gong'),
         # DC인사이드
-        'dcinside_gongmuwon': ('dcinside', 'gongmuwon'),
-        'dcinside_gongsilife': ('dcinside', 'gongsilife'),
-        'dcinside_government': ('dcinside', 'government'),
+        'dcinside_gongmuwon': ('dcinside', 'government'),
+        'dcinside_gongmuwon_minor': ('dcinside', 'gongmuwon'),
     }
 
     def __init__(self, db: Session = None, naver_id: str = None, naver_pw: str = None):
@@ -43,7 +46,7 @@ class CrawlerOrchestrator:
         """소스에 맞는 크롤러 생성"""
         config = self.CRAWLER_MAP.get(source.code)
         if not config:
-            print(f"[!] Unknown source: {source.code}")
+            logger.warning(f"Unknown source: {source.code}")
             return None
 
         crawler_type, target_id = config
@@ -93,7 +96,7 @@ class CrawlerOrchestrator:
             if not crawler:
                 raise Exception(f"Cannot create crawler for {source.code}")
 
-            print(f"\n[*] Starting crawl: {source.name}")
+            logger.info(f"Starting crawl: {source.name}")
 
             # 크롤링 실행
             if keyword:
@@ -101,7 +104,7 @@ class CrawlerOrchestrator:
             else:
                 posts = await crawler.crawl_latest(limit=limit)
 
-            print(f"[-] Crawled {len(posts)} posts")
+            logger.info(f"Crawled {len(posts)} posts from {source.code}")
 
             # 멘션 추출 및 저장
             stats = self.extractor.process_crawled_data(source, posts)
@@ -120,7 +123,7 @@ class CrawlerOrchestrator:
 
         except Exception as e:
             result['error'] = str(e)
-            print(f"[!] Crawl error: {e}")
+            logger.error(f"Crawl error for {source.code}: {e}")
 
             log.status = 'failed'
             log.finished_at = datetime.utcnow()
@@ -138,10 +141,7 @@ class CrawlerOrchestrator:
         sources = self.get_active_sources()
         results = []
 
-        print(f"\n{'='*50}")
-        print(f"Starting crawl for {len(sources)} sources")
-        print(f"Keyword: {keyword or '(latest)'}, Limit: {limit}")
-        print(f"{'='*50}")
+        logger.info(f"Starting crawl for {len(sources)} sources (keyword={keyword or 'latest'}, limit={limit})")
 
         for source in sources:
             result = await self.crawl_source(source, keyword, limit)
@@ -153,13 +153,10 @@ class CrawlerOrchestrator:
         total_mentions = sum(r['mentions_found'] for r in results)
         success_count = sum(1 for r in results if r['success'])
 
-        print(f"\n{'='*50}")
-        print(f"Crawl Summary")
-        print(f"{'='*50}")
-        print(f"Sources: {success_count}/{len(sources)} successful")
-        print(f"Posts: {total_posts}")
-        print(f"Comments: {total_comments}")
-        print(f"Mentions: {total_mentions}")
+        logger.info(
+            f"Crawl summary: {success_count}/{len(sources)} sources, "
+            f"{total_posts} posts, {total_comments} comments, {total_mentions} mentions"
+        )
 
         return results
 
@@ -175,13 +172,10 @@ class CrawlerOrchestrator:
 
         all_results = []
 
-        print(f"\n{'='*50}")
-        print(f"Crawling by teacher names")
-        print(f"Teachers: {len(teachers)}, Sources: {len(sources)}")
-        print(f"{'='*50}")
+        logger.info(f"Crawling by teacher names: {len(teachers)} teachers, {len(sources)} sources")
 
         for teacher in teachers[:10]:  # 테스트용 10명만
-            print(f"\n[*] Searching for: {teacher.name}")
+            logger.info(f"Searching for: {teacher.name}")
 
             for source in sources:
                 try:
@@ -189,7 +183,7 @@ class CrawlerOrchestrator:
                     result['teacher_name'] = teacher.name
                     all_results.append(result)
                 except Exception as e:
-                    print(f"[!] Error: {e}")
+                    logger.error(f"Error crawling {source.code} for {teacher.name}: {e}")
 
                 # 소스간 딜레이
                 await asyncio.sleep(2)
