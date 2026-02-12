@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TeacherHub - 학원 강사 온라인 평판 모니터링 시스템 (크롤링 → AI 감성 분석 → 대시보드)
+TeacherHub - 공무원 학원 강사 평판 분석 시스템 (디시인사이드/네이버카페 크롤링 → AI 감성 분석 → 대시보드/랭킹)
 
 ## Environment
 
@@ -44,8 +44,11 @@ TeacherHub - 학원 강사 온라인 평판 모니터링 시스템 (크롤링 �
 | 항목 | 기술 |
 |------|------|
 | Language | Python |
-| AI | Ollama (로컬 LLM) |
-| DB 연결 | PostgreSQL 직접 연결 |
+| AI | Ollama (로컬 LLM), TextBlob (감성 분석) |
+| Crawler | Playwright (브라우저 자동화), BeautifulSoup4 |
+| Scheduler | APScheduler |
+| DB 연결 | SQLAlchemy + psycopg2 (PostgreSQL 직접) |
+| Data | pandas |
 
 ## Build and Run Commands
 
@@ -68,13 +71,20 @@ docker compose -f docker-compose.local.yml up -d
 
 # 운영 전체 서비스
 docker compose -f docker-compose.prod.yml up -d
+
+# E2E 테스트 (e2e/)
+cd e2e
+npm install
+npx playwright install
+npm run test        # Playwright 테스트
+npm run test:ui     # UI 모드
 ```
 
 ### Port Mapping
 
 | 서비스 | 로컬 | Docker (운영) |
 |--------|------|---------------|
-| Backend API | 8080 | 9010:8080 |
+| Backend API | 8081 | 9010:8080 |
 | Frontend | 3000 | 4010:4010 |
 | PostgreSQL | 5432 | 5432:5432 |
 | AI Crawler | - | (내부) |
@@ -113,7 +123,9 @@ com.teacherhub/
 - SQL 문법: PostgreSQL 호환만 사용
 - 페이지네이션: `LIMIT/OFFSET` 사용 (ROWNUM 금지)
 - 날짜 함수: `CURRENT_TIMESTAMP`, `NOW()` 사용
-- DDL 전략: `spring.jpa.hibernate.ddl-auto=update`
+- DDL 전략: `spring.jpa.hibernate.ddl-auto=validate` (운영)
+- 마이그레이션: `database/migrations/` (Flyway 패턴)
+- 초기화: `database/init.sql`, `v2_schema.sql`, `v2_seed_data.sql`
 
 ## Deployment
 
