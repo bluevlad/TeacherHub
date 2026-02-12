@@ -80,15 +80,22 @@ class BaseCrawler(ABC):
         """랜덤 딜레이"""
         await asyncio.sleep(random.randint(min_ms, max_ms) / 1000)
 
-    async def safe_goto(self, url: str, timeout: int = 30000) -> bool:
-        """안전한 페이지 이동"""
-        try:
-            await self.page.goto(url, wait_until="domcontentloaded", timeout=timeout)
-            await self.random_delay(1000, 2000)
-            return True
-        except Exception as e:
-            logger.warning(f"Navigation failed: {url} - {e}")
-            return False
+    async def safe_goto(self, url: str, timeout: int = 30000, max_retries: int = 3) -> bool:
+        """안전한 페이지 이동 (지수 백오프 재시도)"""
+        for attempt in range(max_retries):
+            try:
+                await self.page.goto(url, wait_until="domcontentloaded", timeout=timeout)
+                await self.random_delay(1000, 2000)
+                return True
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    backoff_ms = (2 ** attempt) * 1000 + random.randint(0, 1000)
+                    logger.warning(f"Navigation failed (attempt {attempt + 1}/{max_retries}): {url} - {e}, retrying in {backoff_ms}ms")
+                    await asyncio.sleep(backoff_ms / 1000)
+                else:
+                    logger.warning(f"Navigation failed after {max_retries} attempts: {url} - {e}")
+                    return False
+        return False
 
     @abstractmethod
     async def crawl(self, keyword: str, limit: int = 50) -> List[Dict[str, Any]]:
