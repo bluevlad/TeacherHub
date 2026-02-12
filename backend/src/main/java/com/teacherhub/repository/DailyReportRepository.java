@@ -19,22 +19,52 @@ public interface DailyReportRepository extends JpaRepository<DailyReport, Long> 
 
     List<DailyReport> findByTeacherIdOrderByReportDateDesc(Long teacherId);
 
-    @Query("SELECT dr FROM DailyReport dr WHERE dr.teacher.id = :teacherId " +
+    // JOIN FETCH로 Teacher + Academy + Subject 일괄 로딩 (N+1 방지)
+    @Query("SELECT dr FROM DailyReport dr " +
+           "LEFT JOIN FETCH dr.teacher t " +
+           "LEFT JOIN FETCH t.academy " +
+           "LEFT JOIN FETCH t.subject " +
+           "WHERE dr.reportDate = :reportDate")
+    List<DailyReport> findByReportDateWithTeacher(@Param("reportDate") LocalDate reportDate);
+
+    @Query("SELECT dr FROM DailyReport dr " +
+           "LEFT JOIN FETCH dr.teacher t " +
+           "LEFT JOIN FETCH t.academy " +
+           "LEFT JOIN FETCH t.subject " +
+           "WHERE t.id = :teacherId " +
            "AND dr.reportDate >= :startDate ORDER BY dr.reportDate DESC")
     List<DailyReport> findTeacherHistory(
         @Param("teacherId") Long teacherId,
         @Param("startDate") LocalDate startDate
     );
 
-    @Query("SELECT dr FROM DailyReport dr WHERE dr.reportDate = :reportDate " +
+    @Query("SELECT dr FROM DailyReport dr " +
+           "LEFT JOIN FETCH dr.teacher t " +
+           "LEFT JOIN FETCH t.academy " +
+           "LEFT JOIN FETCH t.subject " +
+           "WHERE dr.reportDate = :reportDate " +
            "ORDER BY dr.mentionCount DESC")
     List<DailyReport> findTopMentionedByDate(@Param("reportDate") LocalDate reportDate);
 
-    @Query("SELECT dr FROM DailyReport dr JOIN dr.teacher t " +
-           "WHERE t.academy.id = :academyId AND dr.reportDate = :reportDate " +
+    @Query("SELECT dr FROM DailyReport dr " +
+           "LEFT JOIN FETCH dr.teacher t " +
+           "LEFT JOIN FETCH t.academy a " +
+           "LEFT JOIN FETCH t.subject " +
+           "WHERE a.id = :academyId AND dr.reportDate = :reportDate " +
            "ORDER BY dr.mentionCount DESC")
     List<DailyReport> findByAcademyAndDate(
         @Param("academyId") Long academyId,
         @Param("reportDate") LocalDate reportDate
+    );
+
+    // 날짜 범위 조회 (주별/월별 리포트용)
+    @Query("SELECT dr FROM DailyReport dr " +
+           "LEFT JOIN FETCH dr.teacher t " +
+           "LEFT JOIN FETCH t.academy " +
+           "LEFT JOIN FETCH t.subject " +
+           "WHERE dr.reportDate BETWEEN :startDate AND :endDate")
+    List<DailyReport> findByReportDateBetweenWithTeacher(
+        @Param("startDate") LocalDate startDate,
+        @Param("endDate") LocalDate endDate
     );
 }
