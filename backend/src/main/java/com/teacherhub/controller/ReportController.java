@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v2/reports")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
 @Slf4j
 public class ReportController {
 

@@ -8,8 +8,10 @@ from sqlalchemy.orm import sessionmaker, scoped_session
 from sqlalchemy.ext.declarative import declarative_base
 
 # Database Connection Settings
-DB_USER = os.getenv("DB_USER", "teacher")
-DB_PASS = os.getenv("DB_PASS", "password")
+DB_USER = os.getenv("DB_USER", "teacherhub")
+DB_PASS = os.environ.get("DB_PASSWORD") or os.environ.get("DB_PASS")
+if not DB_PASS:
+    raise RuntimeError("DB_PASSWORD 환경변수가 설정되지 않았습니다.")
 DB_HOST = os.getenv("DB_HOST", "db")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "teacherhub")
