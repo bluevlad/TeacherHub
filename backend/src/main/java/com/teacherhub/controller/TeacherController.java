@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v2/teachers")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
 public class TeacherController {
 
     private final TeacherRepository teacherRepository;

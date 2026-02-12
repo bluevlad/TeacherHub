@@ -15,7 +15,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/reputation")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*") // Allow all for demo
+@CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
 public class ReputationController {
 
     private final ReputationRepository reputationRepository;
