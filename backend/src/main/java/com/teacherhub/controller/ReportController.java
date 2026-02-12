@@ -5,10 +5,13 @@ import com.teacherhub.dto.DailyReportDTO;
 import com.teacherhub.dto.PeriodReportDTO;
 import com.teacherhub.dto.PeriodSummaryDTO;
 import com.teacherhub.repository.DailyReportRepository;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -24,7 +27,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v2/reports")
 @RequiredArgsConstructor
-@CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
+@Validated
 @Slf4j
 public class ReportController {
 
@@ -60,8 +63,8 @@ public class ReportController {
      */
     @GetMapping("/weekly")
     public ResponseEntity<PeriodReportDTO> getWeeklyReport(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer week) {
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(53) Integer week) {
 
         LocalDate today = LocalDate.now();
         int targetYear = year != null ? year : today.getYear();
@@ -98,8 +101,8 @@ public class ReportController {
      */
     @GetMapping("/monthly")
     public ResponseEntity<PeriodReportDTO> getMonthlyReport(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month) {
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month) {
 
         LocalDate today = LocalDate.now();
         int targetYear = year != null ? year : today.getYear();
