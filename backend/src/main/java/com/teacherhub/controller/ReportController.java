@@ -45,7 +45,7 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         LocalDate reportDate = date != null ? date : LocalDate.now();
-        List<DailyReport> reports = dailyReportRepository.findByReportDate(reportDate);
+        List<DailyReport> reports = dailyReportRepository.findByReportDateWithTeacher(reportDate);
 
         PeriodReportDTO result = buildPeriodReport(
                 "daily",
@@ -74,13 +74,8 @@ public class ReportController {
         LocalDate weekStart = getWeekStartDate(targetYear, targetWeek);
         LocalDate weekEnd = weekStart.plusDays(6);
 
-        // 해당 기간의 일별 리포트 조회
-        List<DailyReport> allReports = new ArrayList<>();
-        LocalDate current = weekStart;
-        while (!current.isAfter(weekEnd)) {
-            allReports.addAll(dailyReportRepository.findByReportDate(current));
-            current = current.plusDays(1);
-        }
+        // 해당 기간의 일별 리포트 조회 (단일 범위 쿼리 + JOIN FETCH)
+        List<DailyReport> allReports = dailyReportRepository.findByReportDateBetweenWithTeacher(weekStart, weekEnd);
 
         PeriodReportDTO result = buildPeriodReport(
                 "weekly",
@@ -111,13 +106,8 @@ public class ReportController {
         LocalDate monthStart = LocalDate.of(targetYear, targetMonth, 1);
         LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
 
-        // 해당 월의 일별 리포트 조회
-        List<DailyReport> allReports = new ArrayList<>();
-        LocalDate current = monthStart;
-        while (!current.isAfter(monthEnd)) {
-            allReports.addAll(dailyReportRepository.findByReportDate(current));
-            current = current.plusDays(1);
-        }
+        // 해당 월의 일별 리포트 조회 (단일 범위 쿼리 + JOIN FETCH)
+        List<DailyReport> allReports = dailyReportRepository.findByReportDateBetweenWithTeacher(monthStart, monthEnd);
 
         PeriodReportDTO result = buildPeriodReport(
                 "monthly",
