@@ -65,7 +65,7 @@ public class AnalysisService {
     }
 
     public Map<String, Object> getSummary(LocalDate date) {
-        List<DailyReport> reports = dailyReportRepository.findByReportDate(date);
+        List<DailyReport> reports = dailyReportRepository.findByReportDateWithTeacher(date);
         Map<String, Object> summary = aggregateSentimentStats(reports);
         summary.put("date", date);
         summary.put("totalTeachers", reports.size());
@@ -73,7 +73,7 @@ public class AnalysisService {
     }
 
     public List<Map<String, Object>> getAcademyStats(LocalDate date) {
-        List<DailyReport> reports = dailyReportRepository.findByReportDate(date);
+        List<DailyReport> reports = dailyReportRepository.findByReportDateWithTeacher(date);
 
         Map<String, List<DailyReport>> byAcademy = reports.stream()
                 .filter(r -> r.getTeacher() != null && r.getTeacher().getAcademy() != null)
