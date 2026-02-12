@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v2/academies")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
 public class AcademyController {
 
     private final AcademyRepository academyRepository;
