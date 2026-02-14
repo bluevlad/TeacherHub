@@ -52,6 +52,8 @@ database/data/
 # Secrets & Configs
 *.env
 *.env.*
+!*.env.*.example
 backend/src/main/resources/application.properties
+backend/src/main/resources/application-local.properties
 !backend/src/main/resources/application.properties.example
 backend/.gradle/
