@@ -5,10 +5,13 @@ import com.teacherhub.dto.DailyReportDTO;
 import com.teacherhub.dto.PeriodReportDTO;
 import com.teacherhub.dto.PeriodSummaryDTO;
 import com.teacherhub.repository.DailyReportRepository;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.DayOfWeek;
@@ -24,7 +27,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/v2/reports")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Validated
 @Slf4j
 public class ReportController {
 
@@ -42,7 +45,7 @@ public class ReportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         LocalDate reportDate = date != null ? date : LocalDate.now();
-        List<DailyReport> reports = dailyReportRepository.findByReportDate(reportDate);
+        List<DailyReport> reports = dailyReportRepository.findByReportDateWithTeacher(reportDate);
 
         PeriodReportDTO result = buildPeriodReport(
                 "daily",
@@ -60,8 +63,8 @@ public class ReportController {
      */
     @GetMapping("/weekly")
     public ResponseEntity<PeriodReportDTO> getWeeklyReport(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer week) {
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(53) Integer week) {
 
         LocalDate today = LocalDate.now();
         int targetYear = year != null ? year : today.getYear();
@@ -71,13 +74,8 @@ public class ReportController {
         LocalDate weekStart = getWeekStartDate(targetYear, targetWeek);
         LocalDate weekEnd = weekStart.plusDays(6);
 
-        // 해당 기간의 일별 리포트 조회
-        List<DailyReport> allReports = new ArrayList<>();
-        LocalDate current = weekStart;
-        while (!current.isAfter(weekEnd)) {
-            allReports.addAll(dailyReportRepository.findByReportDate(current));
-            current = current.plusDays(1);
-        }
+        // 해당 기간의 일별 리포트 조회 (단일 범위 쿼리 + JOIN FETCH)
+        List<DailyReport> allReports = dailyReportRepository.findByReportDateBetweenWithTeacher(weekStart, weekEnd);
 
         PeriodReportDTO result = buildPeriodReport(
                 "weekly",
@@ -98,8 +96,8 @@ public class ReportController {
      */
     @GetMapping("/monthly")
     public ResponseEntity<PeriodReportDTO> getMonthlyReport(
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month) {
+            @RequestParam(required = false) @Min(2000) @Max(2100) Integer year,
+            @RequestParam(required = false) @Min(1) @Max(12) Integer month) {
 
         LocalDate today = LocalDate.now();
         int targetYear = year != null ? year : today.getYear();
@@ -108,13 +106,8 @@ public class ReportController {
         LocalDate monthStart = LocalDate.of(targetYear, targetMonth, 1);
         LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
 
-        // 해당 월의 일별 리포트 조회
-        List<DailyReport> allReports = new ArrayList<>();
-        LocalDate current = monthStart;
-        while (!current.isAfter(monthEnd)) {
-            allReports.addAll(dailyReportRepository.findByReportDate(current));
-            current = current.plusDays(1);
-        }
+        // 해당 월의 일별 리포트 조회 (단일 범위 쿼리 + JOIN FETCH)
+        List<DailyReport> allReports = dailyReportRepository.findByReportDateBetweenWithTeacher(monthStart, monthEnd);
 
         PeriodReportDTO result = buildPeriodReport(
                 "monthly",

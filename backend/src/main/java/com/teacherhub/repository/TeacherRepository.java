@@ -22,8 +22,11 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
     List<Teacher> findByIsActiveTrue();
 
-    @Query(value = "SELECT * FROM teachers t WHERE t.name ILIKE '%' || :searchTerm || '%' OR :searchTerm = ANY(t.aliases)", nativeQuery = true)
-    List<Teacher> searchByNameOrAlias(@Param("searchTerm") String searchTerm);
+    @Query("SELECT t FROM Teacher t WHERE LOWER(t.name) LIKE LOWER(CONCAT('%', :searchTerm, '%'))")
+    List<Teacher> searchByName(@Param("searchTerm") String searchTerm);
+
+    @Query(value = "SELECT * FROM teachers t WHERE :searchTerm = ANY(t.aliases)", nativeQuery = true)
+    List<Teacher> searchByAlias(@Param("searchTerm") String searchTerm);
 
     @Query("SELECT t FROM Teacher t JOIN t.academy a WHERE a.code = :academyCode AND t.isActive = true")
     List<Teacher> findByAcademyCode(@Param("academyCode") String academyCode);
