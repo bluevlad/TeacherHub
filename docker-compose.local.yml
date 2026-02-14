@@ -1,0 +1,32 @@
+# Local Development - PostgreSQL Only
+# Usage: docker compose -f docker-compose.local.yml up -d
+# DB only: docker compose -f docker-compose.local.yml --profile db up -d
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: teacherhub-db-local
+    profiles:
+      - teacherhub
+      - db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: teacherhub
+    volumes:
+      - local-teacherhub-postgres:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./database/v2_schema.sql:/docker-entrypoint-initdb.d/02-schema.sql
+      - ./database/v2_seed_data.sql:/docker-entrypoint-initdb.d/03-seed.sql
+    networks:
+      - local-dev-network
+    restart: unless-stopped
+
+volumes:
+  local-teacherhub-postgres:
+
+networks:
+  local-dev-network:
+    driver: bridge
