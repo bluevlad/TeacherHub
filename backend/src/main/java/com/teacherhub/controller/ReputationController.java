@@ -2,7 +2,7 @@ package com.teacherhub.controller;
 
 import com.teacherhub.dto.KeywordStats;
 import com.teacherhub.dto.MonthlyStats;
-import com.teacherhub.domain.ReputationData;
+import com.teacherhub.dto.ReputationDataDTO;
 import com.teacherhub.repository.ReputationRepository;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/reputation")
@@ -24,8 +25,10 @@ public class ReputationController {
     private final ReputationRepository reputationRepository;
 
     @GetMapping
-    public List<ReputationData> getAll() {
-        return reputationRepository.findAllByOrderByCreatedAtDesc();
+    public List<ReputationDataDTO> getAll() {
+        return reputationRepository.findAllByOrderByCreatedAtDesc().stream()
+                .map(ReputationDataDTO::fromEntity)
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/stats")

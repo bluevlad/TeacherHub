@@ -3,8 +3,12 @@ package com.teacherhub.controller;
 import com.teacherhub.dto.WeeklyReportDTO;
 import com.teacherhub.dto.WeeklySummaryDTO;
 import com.teacherhub.service.WeeklyReportService;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Positive;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,6 +20,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v2/weekly")
 @RequiredArgsConstructor
+@Validated
 @CrossOrigin(origins = {"${app.cors.allowed-origins:http://localhost:3000}"})
 public class WeeklyReportController {
 
@@ -27,8 +32,8 @@ public class WeeklyReportController {
      */
     @GetMapping("/report")
     public ResponseEntity<List<WeeklyReportDTO>> getWeeklyReports(
-            @RequestParam Integer year,
-            @RequestParam Integer week) {
+            @RequestParam @Min(2000) @Max(2100) Integer year,
+            @RequestParam @Min(1) @Max(53) Integer week) {
         List<WeeklyReportDTO> reports = weeklyReportService.getWeeklyReports(year, week);
         return ResponseEntity.ok(reports);
     }
@@ -39,9 +44,9 @@ public class WeeklyReportController {
      */
     @GetMapping("/teacher/{teacherId}")
     public ResponseEntity<WeeklyReportDTO> getTeacherWeeklyReport(
-            @PathVariable Long teacherId,
-            @RequestParam Integer year,
-            @RequestParam Integer week) {
+            @PathVariable @Positive Long teacherId,
+            @RequestParam @Min(2000) @Max(2100) Integer year,
+            @RequestParam @Min(1) @Max(53) Integer week) {
         return weeklyReportService.getTeacherWeeklyReport(teacherId, year, week)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
@@ -53,9 +58,9 @@ public class WeeklyReportController {
      */
     @GetMapping("/ranking")
     public ResponseEntity<List<WeeklyReportDTO>> getWeeklyRanking(
-            @RequestParam Integer year,
-            @RequestParam Integer week,
-            @RequestParam(defaultValue = "20") Integer limit) {
+            @RequestParam @Min(2000) @Max(2100) Integer year,
+            @RequestParam @Min(1) @Max(53) Integer week,
+            @RequestParam(defaultValue = "20") @Min(1) @Max(100) Integer limit) {
         List<WeeklyReportDTO> ranking = weeklyReportService.getWeeklyRanking(year, week, limit);
         return ResponseEntity.ok(ranking);
     }
@@ -66,9 +71,9 @@ public class WeeklyReportController {
      */
     @GetMapping("/academy/{academyId}")
     public ResponseEntity<List<WeeklyReportDTO>> getAcademyWeeklyReports(
-            @PathVariable Long academyId,
-            @RequestParam Integer year,
-            @RequestParam Integer week) {
+            @PathVariable @Positive Long academyId,
+            @RequestParam @Min(2000) @Max(2100) Integer year,
+            @RequestParam @Min(1) @Max(53) Integer week) {
         List<WeeklyReportDTO> reports = weeklyReportService.getAcademyWeeklyReports(academyId, year, week);
         return ResponseEntity.ok(reports);
     }
@@ -79,8 +84,8 @@ public class WeeklyReportController {
      */
     @GetMapping("/teacher/{teacherId}/trend")
     public ResponseEntity<List<WeeklyReportDTO>> getTeacherTrend(
-            @PathVariable Long teacherId,
-            @RequestParam(defaultValue = "8") Integer weeks) {
+            @PathVariable @Positive Long teacherId,
+            @RequestParam(defaultValue = "8") @Min(1) @Max(52) Integer weeks) {
         List<WeeklyReportDTO> trend = weeklyReportService.getTeacherTrend(teacherId, weeks);
         return ResponseEntity.ok(trend);
     }
@@ -91,8 +96,8 @@ public class WeeklyReportController {
      */
     @GetMapping("/academy/{academyId}/trend")
     public ResponseEntity<List<WeeklyReportDTO>> getAcademyTrend(
-            @PathVariable Long academyId,
-            @RequestParam(defaultValue = "8") Integer weeks) {
+            @PathVariable @Positive Long academyId,
+            @RequestParam(defaultValue = "8") @Min(1) @Max(52) Integer weeks) {
         List<WeeklyReportDTO> trend = weeklyReportService.getAcademyTrend(academyId, weeks);
         return ResponseEntity.ok(trend);
     }
@@ -113,8 +118,8 @@ public class WeeklyReportController {
      */
     @GetMapping("/summary")
     public ResponseEntity<WeeklySummaryDTO> getWeeklySummary(
-            @RequestParam Integer year,
-            @RequestParam Integer week) {
+            @RequestParam @Min(2000) @Max(2100) Integer year,
+            @RequestParam @Min(1) @Max(53) Integer week) {
         WeeklySummaryDTO summary = weeklyReportService.getWeeklySummary(year, week);
         return ResponseEntity.ok(summary);
     }
