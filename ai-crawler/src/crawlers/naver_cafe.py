@@ -45,8 +45,8 @@ class NaverCafeCrawler(BaseCrawler):
         logger.info("Attempting Naver login...")
         try:
             await self.page.goto("https://nid.naver.com/nidlogin.login")
-            await self.page.evaluate(f"document.getElementById('id').value = '{self.nid}'")
-            await self.page.evaluate(f"document.getElementById('pw').value = '{self.npw}'")
+            await self.page.fill('#id', self.nid)
+            await self.page.fill('#pw', self.npw)
             await self.random_delay(800, 1200)
             await self.page.click(".btn_login")
             await self.page.wait_for_load_state("networkidle")
