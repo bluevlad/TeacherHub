@@ -60,6 +60,12 @@ export const reportApi = {
 
     // 선택 가능한 기간 목록
     getPeriods: () => api.get('/api/v2/reports/periods'),
+
+    // 일별 요약 통계 (analysis/summary)
+    getSummary: (date) => api.get('/api/v2/analysis/summary', { params: { date } }),
+
+    // 강사별 리포트 이력
+    getTeacherReport: (teacherId, days) => api.get(`/api/v2/analysis/teachers/${teacherId}/reports`, { params: { days } }),
 };
 
 /**

@@ -2,8 +2,11 @@
 Sentiment Analyzer Service
 감성/난이도/추천 분석 서비스
 """
+import logging
 from typing import Dict, Any, List, Optional
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 
 class SentimentAnalyzer:
@@ -58,7 +61,7 @@ class SentimentAnalyzer:
             self.keywords = self.DEFAULT_KEYWORDS.copy()
 
         self._initialized = True
-        print(f"[-] Loaded keywords: {sum(len(v) for v in self.keywords.values())} total")
+        logger.info(f"Loaded keywords: {sum(len(v) for v in self.keywords.values())} total")
 
     def _load_from_db(self):
         """데이터베이스에서 키워드 로드"""
@@ -75,7 +78,7 @@ class SentimentAnalyzer:
                 self.keywords[kw.category].append((kw.keyword, kw.weight))
 
         except Exception as e:
-            print(f"[!] Failed to load keywords from DB: {e}")
+            logger.error(f"Failed to load keywords from DB: {e}")
             self.keywords = self.DEFAULT_KEYWORDS.copy()
 
     def analyze(self, text: str) -> Dict[str, Any]:

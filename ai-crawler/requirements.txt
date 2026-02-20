@@ -1,13 +1,12 @@
-
-requests
-pandas
-sqlalchemy
-psycopg2-binary
-python-dotenv
-beautifulsoup4
-textblob
-playwright
-apscheduler
+requests==2.31.0
+pandas==2.1.4
+sqlalchemy==2.0.25
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
+beautifulsoup4==4.12.3
+textblob==0.18.0
+playwright==1.41.2
+apscheduler==3.10.4
 # Hugging Face (Optional for now)
-# transformers
-# torch
+# transformers==4.36.0
+# torch==2.1.2

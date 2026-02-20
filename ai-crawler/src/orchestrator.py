@@ -135,30 +135,53 @@ class CrawlerOrchestrator:
     async def crawl_all_sources(
         self,
         keyword: str = None,
-        limit: int = 50
+        limit: int = 50,
+        max_concurrency: int = 3
     ) -> List[Dict[str, Any]]:
-        """모든 활성 소스 크롤링"""
+        """모든 활성 소스 병렬 크롤링 (최대 동시 실행 수 제한)"""
         sources = self.get_active_sources()
-        results = []
 
-        logger.info(f"Starting crawl for {len(sources)} sources (keyword={keyword or 'latest'}, limit={limit})")
+        logger.info(f"Starting crawl for {len(sources)} sources (keyword={keyword or 'latest'}, limit={limit}, concurrency={max_concurrency})")
 
-        for source in sources:
-            result = await self.crawl_source(source, keyword, limit)
-            results.append(result)
+        semaphore = asyncio.Semaphore(max_concurrency)
+
+        async def crawl_with_limit(source):
+            async with semaphore:
+                return await self.crawl_source(source, keyword, limit)
+
+        results = await asyncio.gather(
+            *[crawl_with_limit(source) for source in sources],
+            return_exceptions=True
+        )
+
+        # 예외 처리: gather에서 반환된 예외를 실패 결과로 변환
+        processed_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"Crawl task failed for source {sources[i].code}: {result}")
+                processed_results.append({
+                    'source_code': sources[i].code,
+                    'success': False,
+                    'posts_collected': 0,
+                    'comments_collected': 0,
+                    'mentions_found': 0,
+                    'error': str(result)
+                })
+            else:
+                processed_results.append(result)
 
         # 요약 출력
-        total_posts = sum(r['posts_collected'] for r in results)
-        total_comments = sum(r['comments_collected'] for r in results)
-        total_mentions = sum(r['mentions_found'] for r in results)
-        success_count = sum(1 for r in results if r['success'])
+        total_posts = sum(r['posts_collected'] for r in processed_results)
+        total_comments = sum(r['comments_collected'] for r in processed_results)
+        total_mentions = sum(r['mentions_found'] for r in processed_results)
+        success_count = sum(1 for r in processed_results if r['success'])
 
         logger.info(
             f"Crawl summary: {success_count}/{len(sources)} sources, "
             f"{total_posts} posts, {total_comments} comments, {total_mentions} mentions"
         )
 
-        return results
+        return processed_results
 
     async def crawl_by_teacher_names(self, limit: int = 30) -> List[Dict[str, Any]]:
         """
