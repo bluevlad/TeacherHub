@@ -57,3 +57,14 @@ backend/src/main/resources/application.properties
 backend/src/main/resources/application-local.properties
 !backend/src/main/resources/application.properties.example
 backend/.gradle/
+
+# Deploy artifacts
+deploy/backups/
+deploy/exports/
+
+# AI-Crawler debug/test files
+ai-crawler/debug_*.html
+ai-crawler/test_*.py
+
+# Database migration scripts (local)
+database/update_*.sql

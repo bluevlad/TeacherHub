@@ -1,0 +1,38 @@
+# ==============================================
+# 개발서버 전용 - 운영 DB 원격 접속 (SSH 터널 경유)
+# ==============================================
+#
+# 사전 준비:
+#   1. SSH 터널 설정:
+#      ssh -L 15432:localhost:5432 <user>@study.unmong.com -N -f
+#
+#   2. 환경변수 파일 생성:
+#      cp .env.dev-remote.example .env.dev-remote
+#      # .env.dev-remote에 운영 DB 비밀번호 입력
+#
+# 실행:
+#   docker compose -f docker-compose.dev-remote.yml up --build
+#
+# CLI 사용:
+#   docker exec teacherhub-crawler-dev python -m src.cli status
+#   docker exec teacherhub-crawler-dev python -m src.cli report --period daily
+#
+
+services:
+  crawler:
+    build:
+      context: ./ai-crawler
+      dockerfile: Dockerfile
+    container_name: teacherhub-crawler-dev
+    restart: "no"
+    env_file:
+      - .env.dev-remote
+    environment:
+      PYTHONPATH: /app
+      PYTHONUNBUFFERED: "1"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./ai-crawler:/app
+    stdin_open: true
+    tty: true
