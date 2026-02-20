@@ -106,8 +106,7 @@ class ReportGenerator:
         report.summary = summary
         report.top_keywords = top_keywords
 
-        self.db.commit()
-        self.db.refresh(report)
+        self.db.flush()
 
         return report
 
@@ -177,8 +176,7 @@ class ReportGenerator:
         stats.avg_sentiment_score = avg_sentiment
         stats.top_teacher_id = top_teacher_id
 
-        self.db.commit()
-        self.db.refresh(stats)
+        self.db.flush()
 
         return stats
 
@@ -219,6 +217,13 @@ class ReportGenerator:
             if academy_stats:
                 stats['academy_stats'] += 1
                 print(f"    - {academy.name}: {academy_stats.total_mentions} total mentions")
+
+        # 전체 리포트 생성 완료 후 1회 commit (건별 commit 대신 배치 commit)
+        try:
+            self.db.commit()
+        except Exception as e:
+            print(f"[!] Error committing reports: {e}")
+            self.db.rollback()
 
         print(f"\n[*] Report generation complete")
         print(f"    Teacher reports: {stats['teacher_reports']}")

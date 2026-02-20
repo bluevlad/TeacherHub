@@ -128,8 +128,7 @@ class MentionExtractor:
         )
 
         self.db.add(mention)
-        self.db.commit()
-        self.db.refresh(mention)
+        self.db.flush()
 
         return mention
 
@@ -182,6 +181,13 @@ class MentionExtractor:
                 self.db.rollback()
                 continue
 
+        # 전체 처리 완료 후 1회 commit (건별 commit 대신 배치 commit)
+        try:
+            self.db.commit()
+        except Exception as e:
+            print(f"[!] Error committing batch: {e}")
+            self.db.rollback()
+
         return stats
 
     def _save_post(self, source: CollectionSource, data: Dict[str, Any]) -> tuple:
@@ -202,7 +208,7 @@ class MentionExtractor:
             existing.view_count = data.get('view_count', existing.view_count)
             existing.like_count = data.get('like_count', existing.like_count)
             existing.comment_count = data.get('comment_count', existing.comment_count)
-            self.db.commit()
+            self.db.flush()
             return existing, False
 
         # 새로 생성
@@ -220,8 +226,7 @@ class MentionExtractor:
         )
 
         self.db.add(post)
-        self.db.commit()
-        self.db.refresh(post)
+        self.db.flush()
 
         return post, True
 
@@ -250,8 +255,7 @@ class MentionExtractor:
         )
 
         self.db.add(comment)
-        self.db.commit()
-        self.db.refresh(comment)
+        self.db.flush()
 
         return comment, True
 
