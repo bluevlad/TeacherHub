@@ -5,8 +5,8 @@ COPY build.gradle settings.gradle ./
 COPY src ./src
 RUN gradle build --no-daemon -x test
 
-# Run stage
-FROM eclipse-temurin:17-jdk
+# Run stage - JRE only (smaller image, no compiler needed at runtime)
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 COPY --from=builder /app/build/libs/*.jar app.jar
 EXPOSE 8080
