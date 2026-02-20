@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -46,8 +47,12 @@ public class SecurityConfig {
                 return config;
             }))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/**").permitAll()
-                .anyRequest().permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/**").permitAll()
+                .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/api/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/api/**").authenticated()
+                .anyRequest().denyAll()
             )
             .addFilterBefore(new ApiKeyAuthFilter(adminApiKey), UsernamePasswordAuthenticationFilter.class);
 
@@ -65,7 +70,15 @@ public class SecurityConfig {
         @Override
         protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
                                         FilterChain filterChain) throws ServletException, IOException {
+            // API Key가 미설정이면 필터 스킵 (개발 환경)
             if (apiKey == null || apiKey.isBlank()) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
+            // GET, OPTIONS 요청은 인증 없이 허용
+            String method = request.getMethod();
+            if ("GET".equalsIgnoreCase(method) || "OPTIONS".equalsIgnoreCase(method)) {
                 filterChain.doFilter(request, response);
                 return;
             }
