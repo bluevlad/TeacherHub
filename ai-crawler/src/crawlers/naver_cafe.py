@@ -108,7 +108,7 @@ class NaverCafeCrawler(BaseCrawler):
                     await self.page.wait_for_selector(sel, timeout=5000)
                     list_found = True
                     break
-                except:
+                except Exception:
                     continue
 
             if not list_found:
@@ -258,7 +258,7 @@ class NaverCafeCrawler(BaseCrawler):
             if view_elem:
                 try:
                     result['view_count'] = int(re.sub(r'[^\d]', '', view_elem.get_text()))
-                except:
+                except (ValueError, TypeError):
                     pass
 
             # 댓글 추출

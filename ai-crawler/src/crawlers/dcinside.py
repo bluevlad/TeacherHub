@@ -187,7 +187,7 @@ class DCInsideCrawler(BaseCrawler):
         if view_elem:
             try:
                 view_count = int(view_elem.get_text(strip=True).replace('-', '0'))
-            except:
+            except (ValueError, TypeError):
                 pass
 
         # 추천수
@@ -196,7 +196,7 @@ class DCInsideCrawler(BaseCrawler):
         if recommend_elem:
             try:
                 like_count = int(recommend_elem.get_text(strip=True).replace('-', '0'))
-            except:
+            except (ValueError, TypeError):
                 pass
 
         # 댓글수 (제목 옆 [숫자])
