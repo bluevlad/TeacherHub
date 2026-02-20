@@ -18,8 +18,14 @@ DB_NAME = os.getenv("DB_NAME", "teacherhub")
 
 DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Engine & Session
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
+# Engine & Session (커넥션 풀 설정)
+engine = create_engine(
+    DATABASE_URL,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 ScopedSession = scoped_session(SessionLocal)
 

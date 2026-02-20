@@ -1,6 +1,6 @@
 package com.teacherhub.controller;
 
-import com.teacherhub.dto.KeywordStats;
+import com.teacherhub.domain.ReputationData;
 import com.teacherhub.dto.MonthlyStats;
 import com.teacherhub.dto.ReputationDataDTO;
 import com.teacherhub.repository.ReputationRepository;
@@ -11,9 +11,8 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -21,6 +20,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Validated
 public class ReputationController {
+
+    private static final DateTimeFormatter YEAR_MONTH_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM");
 
     private final ReputationRepository reputationRepository;
 
@@ -44,9 +45,23 @@ public class ReputationController {
         if (totalComments == null)
             totalComments = 0L;
 
-        // 3. Last Year Monthly Stats
+        // 3. Last Year Monthly Stats (Java 그룹핑으로 PostgreSQL TO_CHAR 종속성 제거)
         LocalDateTime oneYearAgo = LocalDateTime.now().minusYears(1);
-        List<MonthlyStats> monthlyStats = reputationRepository.findMonthlyStats(keyword, oneYearAgo);
+        List<ReputationData> reputationDataList = reputationRepository
+                .findByKeywordAndPostDateAfter(keyword, oneYearAgo);
+
+        // Java에서 월별 그룹핑 수행
+        Map<String, Long> monthlyCountMap = reputationDataList.stream()
+                .filter(r -> r.getPostDate() != null)
+                .collect(Collectors.groupingBy(
+                        r -> r.getPostDate().format(YEAR_MONTH_FORMAT),
+                        TreeMap::new,
+                        Collectors.counting()
+                ));
+
+        List<MonthlyStats> monthlyStats = monthlyCountMap.entrySet().stream()
+                .map(entry -> new MonthlyStats(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
 
         result.put("keyword", keyword);
         result.put("totalPosts", totalPosts);

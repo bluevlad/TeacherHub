@@ -98,6 +98,7 @@ public class WeeklyReportService {
 
     /**
      * 학원 트렌드 조회 (최근 N주)
+     * 범위 쿼리 1회로 전체 데이터를 가져온 후 Java에서 주차별 그룹핑
      */
     public List<WeeklyReportDTO> getAcademyTrend(Long academyId, int weeks) {
         Objects.requireNonNull(academyId, "academyId must not be null");
@@ -107,25 +108,34 @@ public class WeeklyReportService {
         int currentYear = now.get(IsoFields.WEEK_BASED_YEAR);
         int currentWeek = now.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR);
 
+        // 시작 주차 계산
+        int startYear = currentYear;
+        int startWeek = currentWeek - (weeks - 1);
+        while (startWeek <= 0) {
+            startYear--;
+            startWeek += 52;
+        }
+
+        // 범위 쿼리 1회로 전체 데이터 조회
+        List<WeeklyReport> allReports = weeklyReportRepository
+                .findByAcademyAndWeekRange(academyId, startYear, startWeek, currentYear, currentWeek);
+
+        // 주차별 그룹핑 (year-week 키)
+        Map<String, List<WeeklyReport>> groupedByWeek = allReports.stream()
+                .collect(Collectors.groupingBy(
+                        r -> r.getYear() + "-" + r.getWeekNumber(),
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
+
+        // 주차별 합산 데이터 생성
         List<WeeklyReportDTO> trendData = new ArrayList<>();
-
-        for (int i = weeks - 1; i >= 0; i--) {
-            int targetYear = currentYear;
-            int targetWeek = currentWeek - i;
-
-            // 연도 보정
-            while (targetWeek <= 0) {
-                targetYear--;
-                targetWeek += 52;
-            }
-
-            List<WeeklyReport> academyReports = weeklyReportRepository
-                    .findByAcademyAndWeek(academyId, targetYear, targetWeek);
-
-            if (!academyReports.isEmpty()) {
-                // 학원 합산 데이터 생성
-                WeeklyReportDTO summary = aggregateAcademyReports(academyReports, targetYear, targetWeek);
-                trendData.add(summary);
+        for (Map.Entry<String, List<WeeklyReport>> entry : groupedByWeek.entrySet()) {
+            List<WeeklyReport> weekReports = entry.getValue();
+            if (!weekReports.isEmpty()) {
+                int year = weekReports.get(0).getYear();
+                int weekNumber = weekReports.get(0).getWeekNumber();
+                trendData.add(aggregateAcademyReports(weekReports, year, weekNumber));
             }
         }
 
