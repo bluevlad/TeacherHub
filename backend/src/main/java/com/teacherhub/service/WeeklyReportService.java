@@ -29,6 +29,9 @@ public class WeeklyReportService {
      * 특정 주차의 모든 리포트 조회
      */
     public List<WeeklyReportDTO> getWeeklyReports(Integer year, Integer weekNumber) {
+        Objects.requireNonNull(year, "year must not be null");
+        Objects.requireNonNull(weekNumber, "weekNumber must not be null");
+
         List<WeeklyReport> reports = weeklyReportRepository
                 .findByYearAndWeekNumberOrderByMentionCountDesc(year, weekNumber);
         return reports.stream()
@@ -40,6 +43,10 @@ public class WeeklyReportService {
      * 특정 강사의 주간 리포트 조회
      */
     public Optional<WeeklyReportDTO> getTeacherWeeklyReport(Long teacherId, Integer year, Integer weekNumber) {
+        Objects.requireNonNull(teacherId, "teacherId must not be null");
+        Objects.requireNonNull(year, "year must not be null");
+        Objects.requireNonNull(weekNumber, "weekNumber must not be null");
+
         return weeklyReportRepository
                 .findByTeacherIdAndYearAndWeekNumber(teacherId, year, weekNumber)
                 .map(WeeklyReportDTO::fromEntity);
@@ -49,6 +56,9 @@ public class WeeklyReportService {
      * 주간 랭킹 조회
      */
     public List<WeeklyReportDTO> getWeeklyRanking(Integer year, Integer weekNumber, int limit) {
+        Objects.requireNonNull(year, "year must not be null");
+        Objects.requireNonNull(weekNumber, "weekNumber must not be null");
+
         List<WeeklyReport> reports = weeklyReportRepository
                 .findTopRankingByWeek(year, weekNumber, PageRequest.of(0, limit));
         return reports.stream()
@@ -60,6 +70,10 @@ public class WeeklyReportService {
      * 학원별 주간 리포트 조회
      */
     public List<WeeklyReportDTO> getAcademyWeeklyReports(Long academyId, Integer year, Integer weekNumber) {
+        Objects.requireNonNull(academyId, "academyId must not be null");
+        Objects.requireNonNull(year, "year must not be null");
+        Objects.requireNonNull(weekNumber, "weekNumber must not be null");
+
         List<WeeklyReport> reports = weeklyReportRepository
                 .findByAcademyAndWeek(academyId, year, weekNumber);
         return reports.stream()
@@ -71,6 +85,8 @@ public class WeeklyReportService {
      * 강사 트렌드 조회 (최근 N주)
      */
     public List<WeeklyReportDTO> getTeacherTrend(Long teacherId, int weeks) {
+        Objects.requireNonNull(teacherId, "teacherId must not be null");
+
         List<WeeklyReport> reports = weeklyReportRepository
                 .findRecentByTeacherId(teacherId, PageRequest.of(0, weeks));
         // 시간순 정렬 (과거 -> 현재)
@@ -84,6 +100,8 @@ public class WeeklyReportService {
      * 학원 트렌드 조회 (최근 N주)
      */
     public List<WeeklyReportDTO> getAcademyTrend(Long academyId, int weeks) {
+        Objects.requireNonNull(academyId, "academyId must not be null");
+
         // 현재 주차 계산
         LocalDate now = LocalDate.now();
         int currentYear = now.get(IsoFields.WEEK_BASED_YEAR);
@@ -138,6 +156,9 @@ public class WeeklyReportService {
      * 주간 요약 통계 조회
      */
     public WeeklySummaryDTO getWeeklySummary(Integer year, Integer weekNumber) {
+        Objects.requireNonNull(year, "year must not be null");
+        Objects.requireNonNull(weekNumber, "weekNumber must not be null");
+
         List<WeeklyReport> reports = weeklyReportRepository
                 .findByYearAndWeekNumberOrderByMentionCountDesc(year, weekNumber);
 
@@ -161,6 +182,7 @@ public class WeeklyReportService {
         int totalRecommendations = reports.stream().mapToInt(WeeklyReport::getRecommendationCount).sum();
 
         Set<Long> uniqueAcademies = reports.stream()
+                .filter(r -> r.getAcademy() != null)
                 .map(r -> r.getAcademy().getId())
                 .collect(Collectors.toSet());
 
@@ -201,11 +223,13 @@ public class WeeklyReportService {
         int totalNeutral = reports.stream().mapToInt(WeeklyReport::getNeutralCount).sum();
         int totalRecommendations = reports.stream().mapToInt(WeeklyReport::getRecommendationCount).sum();
 
-        WeeklyReport first = reports.get(0);
+        WeeklyReport first = reports.stream().findFirst().orElse(null);
+        Long academyId = (first != null && first.getAcademy() != null) ? first.getAcademy().getId() : null;
+        String academyName = (first != null && first.getAcademy() != null) ? first.getAcademy().getName() : "Unknown";
 
         return WeeklyReportDTO.builder()
-                .academyId(first.getAcademy().getId())
-                .academyName(first.getAcademy().getName())
+                .academyId(academyId)
+                .academyName(academyName)
                 .year(year)
                 .weekNumber(weekNumber)
                 .weekLabel(year + "년 " + weekNumber + "주차")
