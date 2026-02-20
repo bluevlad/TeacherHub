@@ -2,10 +2,13 @@
 Mention Extractor Service
 게시글에서 강사 멘션 추출 및 저장
 """
+import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
+
+logger = logging.getLogger(__name__)
 
 from .teacher_matcher import TeacherMatcher, MatchResult
 from .sentiment_analyzer import SentimentAnalyzer
@@ -177,7 +180,7 @@ class MentionExtractor:
                 stats['mentions_found'] += len(mentions)
 
             except Exception as e:
-                print(f"[!] Error processing post: {e}")
+                logger.error(f"Error processing post: {e}")
                 self.db.rollback()
                 continue
 
@@ -185,7 +188,7 @@ class MentionExtractor:
         try:
             self.db.commit()
         except Exception as e:
-            print(f"[!] Error committing batch: {e}")
+            logger.error(f"Error committing batch: {e}")
             self.db.rollback()
 
         return stats

@@ -2,10 +2,13 @@
 Teacher Name Matcher Service
 강사명 매칭 서비스
 """
+import logging
 import re
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -47,7 +50,7 @@ class TeacherMatcher:
             teachers = self._load_from_db()
 
         if not teachers:
-            print("[!] No teachers to load")
+            logger.warning("No teachers to load")
             return
 
         self._name_map.clear()
@@ -88,9 +91,9 @@ class TeacherMatcher:
                 pattern = re.compile(pattern_str, re.IGNORECASE)
                 self._patterns.append((pattern, teacher_id, name))
             except re.error as e:
-                print(f"[!] Regex error for '{name}': {e}")
+                logger.error(f"Regex error for '{name}': {e}")
 
-        print(f"[-] Loaded {len(self._teacher_info)} teachers, {len(self._name_map)} names/aliases")
+        logger.info(f"Loaded {len(self._teacher_info)} teachers, {len(self._name_map)} names/aliases")
 
     def _load_from_db(self) -> List[Dict[str, Any]]:
         """데이터베이스에서 강사 정보 로드"""

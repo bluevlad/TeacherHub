@@ -2,11 +2,14 @@
 Daily Report Generator Service
 데일리 리포트 생성 서비스
 """
+import logging
 from datetime import date, datetime, timedelta
 from typing import List, Dict, Any, Optional
 from collections import Counter
 from sqlalchemy.orm import Session
 from sqlalchemy import func, and_
+
+logger = logging.getLogger(__name__)
 
 from ..models import (
     Teacher, Academy, TeacherMention, DailyReport,
@@ -198,36 +201,38 @@ class ReportGenerator:
         # 활성 강사 목록
         teachers = self.db.query(Teacher).filter(Teacher.is_active == True).all()
 
-        print(f"\n[*] Generating reports for {report_date}")
-        print(f"[-] Processing {len(teachers)} teachers...")
+        logger.info(f"Generating reports for {report_date}")
+        logger.info(f"Processing {len(teachers)} teachers...")
 
         for teacher in teachers:
             report = self.generate_teacher_report(teacher.id, report_date)
             if report:
                 stats['teacher_reports'] += 1
-                print(f"    - {teacher.name}: {report.mention_count} mentions")
+                logger.debug(f"  {teacher.name}: {report.mention_count} mentions")
 
         # 학원별 통계
         academies = self.db.query(Academy).filter(Academy.is_active == True).all()
 
-        print(f"[-] Processing {len(academies)} academies...")
+        logger.info(f"Processing {len(academies)} academies...")
 
         for academy in academies:
             academy_stats = self.generate_academy_stats(academy.id, report_date)
             if academy_stats:
                 stats['academy_stats'] += 1
-                print(f"    - {academy.name}: {academy_stats.total_mentions} total mentions")
+                logger.debug(f"  {academy.name}: {academy_stats.total_mentions} total mentions")
 
         # 전체 리포트 생성 완료 후 1회 commit (건별 commit 대신 배치 commit)
         try:
             self.db.commit()
         except Exception as e:
-            print(f"[!] Error committing reports: {e}")
+            logger.error(f"Error committing reports: {e}")
             self.db.rollback()
 
-        print(f"\n[*] Report generation complete")
-        print(f"    Teacher reports: {stats['teacher_reports']}")
-        print(f"    Academy stats: {stats['academy_stats']}")
+        logger.info(
+            f"Report generation complete: "
+            f"teacher_reports={stats['teacher_reports']}, "
+            f"academy_stats={stats['academy_stats']}"
+        )
 
         return stats
 
