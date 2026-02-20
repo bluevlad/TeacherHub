@@ -113,8 +113,7 @@ class PostRepository:
     def create(db: Session, post_data: Dict[str, Any]) -> Post:
         post = Post(**post_data)
         db.add(post)
-        db.commit()
-        db.refresh(post)
+        db.flush()
         return post
 
     @staticmethod
@@ -127,8 +126,7 @@ class PostRepository:
             return existing, False
         post = Post(source_id=source_id, external_id=external_id, **post_data)
         db.add(post)
-        db.commit()
-        db.refresh(post)
+        db.flush()
         return post, True
 
     @staticmethod
@@ -149,8 +147,7 @@ class CommentRepository:
     def create(db: Session, comment_data: Dict[str, Any]) -> Comment:
         comment = Comment(**comment_data)
         db.add(comment)
-        db.commit()
-        db.refresh(comment)
+        db.flush()
         return comment
 
     @staticmethod
@@ -165,8 +162,7 @@ class TeacherMentionRepository:
     def create(db: Session, mention_data: Dict[str, Any]) -> TeacherMention:
         mention = TeacherMention(**mention_data)
         db.add(mention)
-        db.commit()
-        db.refresh(mention)
+        db.flush()
         return mention
 
     @staticmethod
@@ -227,14 +223,12 @@ class DailyReportRepository:
         if existing:
             for key, value in report_data.items():
                 setattr(existing, key, value)
-            db.commit()
-            db.refresh(existing)
+            db.flush()
             return existing
 
         report = DailyReport(report_date=report_date, teacher_id=teacher_id, **report_data)
         db.add(report)
-        db.commit()
-        db.refresh(report)
+        db.flush()
         return report
 
     @staticmethod
@@ -273,14 +267,12 @@ class AcademyDailyStatsRepository:
         if existing:
             for key, value in stats_data.items():
                 setattr(existing, key, value)
-            db.commit()
-            db.refresh(existing)
+            db.flush()
             return existing
 
         stats = AcademyDailyStats(report_date=report_date, academy_id=academy_id, **stats_data)
         db.add(stats)
-        db.commit()
-        db.refresh(stats)
+        db.flush()
         return stats
 
 
@@ -295,8 +287,7 @@ class CrawlLogRepository:
             status='running'
         )
         db.add(log)
-        db.commit()
-        db.refresh(log)
+        db.flush()
         return log
 
     @staticmethod
@@ -310,8 +301,7 @@ class CrawlLogRepository:
             log.comments_collected = comments
             log.mentions_found = mentions
             log.error_message = error
-            db.commit()
-            db.refresh(log)
+            db.flush()
         return log
 
     @staticmethod

@@ -1,9 +1,9 @@
 package com.teacherhub.repository;
 
 import com.teacherhub.domain.ReputationData;
-import com.teacherhub.dto.MonthlyStats;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -16,12 +16,16 @@ public interface ReputationRepository extends JpaRepository<ReputationData, Long
     long countByKeyword(String keyword);
 
     @Query("SELECT SUM(r.commentCount) FROM ReputationData r WHERE r.keyword = :keyword")
-    Long countTotalCommentsByKeyword(String keyword);
+    Long countTotalCommentsByKeyword(@Param("keyword") String keyword);
 
-    @Query("SELECT new com.teacherhub.dto.MonthlyStats(TO_CHAR(r.postDate, 'YYYY-MM'), COUNT(r)) " +
-            "FROM ReputationData r " +
+    /**
+     * 키워드 및 시작일 이후의 ReputationData 조회
+     * Java 코드에서 월별 그룹핑 수행 (PostgreSQL TO_CHAR 종속성 제거)
+     */
+    @Query("SELECT r FROM ReputationData r " +
             "WHERE r.keyword = :keyword AND r.postDate >= :startDate " +
-            "GROUP BY TO_CHAR(r.postDate, 'YYYY-MM') " +
-            "ORDER BY TO_CHAR(r.postDate, 'YYYY-MM')")
-    List<MonthlyStats> findMonthlyStats(String keyword, LocalDateTime startDate);
+            "ORDER BY r.postDate ASC")
+    List<ReputationData> findByKeywordAndPostDateAfter(
+            @Param("keyword") String keyword,
+            @Param("startDate") LocalDateTime startDate);
 }
