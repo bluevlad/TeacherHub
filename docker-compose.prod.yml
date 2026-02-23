@@ -10,8 +10,8 @@ services:
     environment:
       SERVER_PORT: 8080
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgresql:5432/teacherhub
-      SPRING_DATASOURCE_USERNAME: ${DB_USER:-postgres}
-      SPRING_DATASOURCE_PASSWORD: ${DB_PASS:?DB_PASS 환경변수를 설정해주세요}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER:-teacherhub_svc}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS:-c9PN92rCPIrjPvrQBnasX22knlH43tq}
       SPRING_JPA_HIBERNATE_DDL_AUTO: validate
     networks:
       - teacherhub-network
@@ -56,8 +56,8 @@ services:
     environment:
       DB_HOST: postgresql
       DB_PORT: 5432
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASS: ${DB_PASS:?DB_PASS 환경변수를 설정해주세요}
+      DB_USER: ${DB_USER:-teacherhub_svc}
+      DB_PASS: ${DB_PASS:-c9PN92rCPIrjPvrQBnasX22knlH43tq}
       DB_NAME: teacherhub
       OLLAMA_HOST: http://host.docker.internal:11434
     extra_hosts:
