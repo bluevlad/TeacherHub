@@ -21,7 +21,7 @@ COPY --from=builder /app/build /usr/share/nginx/html
 
 # React Router support (SPA fallback)
 RUN echo 'server { \
-    listen 3000; \
+    listen 4010; \
     root /usr/share/nginx/html; \
     index index.html; \
     location / { \
@@ -29,5 +29,5 @@ RUN echo 'server { \
     } \
 }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 3000
+EXPOSE 4010
 CMD ["nginx", "-g", "daemon off;"]
