@@ -27,6 +27,11 @@ class DCInsideCrawler(BaseCrawler):
             'name': '공무원 마이너 갤러리',
             'type': 'mgallery',   # 마이너 갤러리
             'url': 'https://gall.dcinside.com/mgallery/board/lists/?id=gongmuwon'
+        },
+        'gosi': {
+            'name': '고시 갤러리',
+            'type': 'mgallery',   # 마이너 갤러리
+            'url': 'https://gall.dcinside.com/mgallery/board/lists/?id=gosi'
         }
     }
 

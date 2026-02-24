@@ -68,7 +68,7 @@ services:
       - teacherhub-network
       - database-network
     restart: always
-    command: python src/main.py
+    command: python -m src.main
     healthcheck:
       test: ["CMD", "python", "-c", "import os; exit(0)"]
       interval: 30s

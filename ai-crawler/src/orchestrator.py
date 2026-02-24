@@ -27,7 +27,9 @@ class CrawlerOrchestrator:
         'naver_9gong': ('naver_cafe', '9gong'),
         # DC인사이드
         'dcinside_gongmuwon': ('dcinside', 'government'),
+        'dcinside_government': ('dcinside', 'government'),
         'dcinside_gongmuwon_minor': ('dcinside', 'gongmuwon'),
+        'dcinside_gosi': ('dcinside', 'gosi'),
     }
 
     def __init__(self, db: Session = None, naver_id: str = None, naver_pw: str = None):
