@@ -65,6 +65,7 @@ deploy/exports/
 # AI-Crawler debug/test files
 ai-crawler/debug_*.html
 ai-crawler/test_*.py
+ai-crawler/data/
 
 # Database migration scripts (local)
 database/update_*.sql
