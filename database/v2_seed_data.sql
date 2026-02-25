@@ -1,7 +1,8 @@
 -- ============================================
--- TeacherHub V2 Seed Data
+-- AcademyInsight (TeacherHub) V2 Seed Data
 -- 초기 데이터 삽입
 -- 생성일: 2025-02-03
+-- 수정일: 2026-02-25 (AcademyInsight 통합 - 소스/학원/강사 추가)
 -- ============================================
 
 -- v2_schema.sql 실행 후 이 파일 실행
@@ -19,7 +20,12 @@ INSERT INTO collection_sources (name, code, base_url, source_type, config) VALUE
 ('디시인사이드 - 공무원 갤러리', 'dcinside_gongmuwon', 'https://gall.dcinside.com/board/lists/?id=government', 'gallery',
  '{"gallery_id": "government", "requires_login": false}'),
 ('디시인사이드 - 공무원 마이너 갤러리', 'dcinside_gongmuwon_minor', 'https://gall.dcinside.com/mgallery/board/lists/?id=gongmuwon', 'gallery',
- '{"gallery_id": "gongmuwon", "is_minor": true, "requires_login": false}')
+ '{"gallery_id": "gongmuwon", "is_minor": true, "requires_login": false}'),
+-- AcademyInsight 통합 추가 소스 (2026-02-25)
+('다음카페 - 공무원시험', 'daum_gongmuwon', 'https://cafe.daum.net/gongmuwon', 'cafe',
+ '{"cafe_id": "gongmuwon", "requires_login": false}'),
+('디시인사이드 - 공시생 마이너 갤러리', 'dcinside_gongsisaeng', 'https://gall.dcinside.com/mgallery/board/lists/?id=gongsisaeng', 'gallery',
+ '{"gallery_id": "gongsisaeng", "is_minor": true, "requires_login": false}')
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
     base_url = EXCLUDED.base_url,
@@ -32,7 +38,9 @@ INSERT INTO academies (name, code, website) VALUES
 ('공단기', 'gongdangi', 'https://gong.conects.com'),
 ('해커스공무원', 'hackers', 'https://gosi.hackers.com'),
 ('윌비스공무원', 'willbes', 'https://pass.willbes.net'),
-('에듀윌공무원', 'eduwill', 'https://gov.eduwill.net')
+('에듀윌공무원', 'eduwill', 'https://gov.eduwill.net'),
+-- AcademyInsight 통합 추가 학원 (2026-02-25)
+('박문각', 'pmg', 'https://www.pmg.co.kr')
 ON CONFLICT (code) DO UPDATE SET
     name = EXCLUDED.name,
     website = EXCLUDED.website;
@@ -210,6 +218,33 @@ INSERT INTO teachers (academy_id, subject_id, name, aliases) VALUES
 ((SELECT id FROM academies WHERE code='eduwill'), (SELECT id FROM subjects WHERE name='언어논리'), '차선우', ARRAY['차선우쌤']),
 ((SELECT id FROM academies WHERE code='eduwill'), (SELECT id FROM subjects WHERE name='자료해석'), '김성욱', ARRAY['김성욱쌤']),
 ((SELECT id FROM academies WHERE code='eduwill'), (SELECT id FROM subjects WHERE name='상황판단'), '김재형', ARRAY['김재형쌤'])
+ON CONFLICT DO NOTHING;
+
+-- ============================================
+-- 8. 강사 데이터 - 박문각 (AcademyInsight 통합, 2026-02-25)
+-- ============================================
+INSERT INTO teachers (academy_id, subject_id, name, aliases) VALUES
+-- 국어
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='국어'), '박혜선', ARRAY['박혜선쌤']),
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='국어'), '강세진', ARRAY['강세진쌤']),
+-- 영어
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='영어'), '진가영', ARRAY['진가영쌤', '가영쌤']),
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='영어'), '김세현', ARRAY['김세현쌤']),
+-- 한국사
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='한국사'), '노범석', ARRAY['노범석쌤']),
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='한국사'), '신동수', ARRAY['신동수쌤']),
+-- 행정법
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='행정법'), '어대훈', ARRAY['어대훈쌤', '대훈쌤']),
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='행정법'), '이준', ARRAY['이준쌤', '이준행정법']),
+-- 행정학
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='행정학'), '최욱진', ARRAY['최욱진쌤', '욱진쌤']),
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='행정학'), '강성빈', ARRAY['강성빈쌤', '성빈쌤']),
+-- 헌법
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='헌법'), '박충신', ARRAY['박충신쌤', '충신쌤']),
+-- 형법
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='형법'), '이준현', ARRAY['이준현쌤', '준현쌤']),
+-- 경제학
+((SELECT id FROM academies WHERE code='pmg'), (SELECT id FROM subjects WHERE name='경제학'), '정용수', ARRAY['정용수쌤', '용수쌤'])
 ON CONFLICT DO NOTHING;
 
 -- ============================================
